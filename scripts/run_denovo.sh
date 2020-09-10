@@ -20,4 +20,6 @@ $SPARK_HOME/bin/spark-submit --master ${MASTER_URL} --num-executors ${NUM_EXECUT
     --conf spark.yarn.appMasterEnv.SPARK_HOME=${SPARK_HOME_DIR} \
     --conf spark.executorEnv.CANNOLI_HOME=${CANNOLI_HOME_DIR} \
     --conf spark.executorEnv.SPARK_HOME=${SPARK_HOME_DIR} \
-    ${HOME}/eva-denovo_2.12-0.1.jar -i ${LOCAL_PREFIX}/${1} -d ${LOCAL_PREFIX}/${2} &> LOGFILE &
+    ${HOME}/eva-denovo_2.12-0.1.jar -i ${LOCAL_PREFIX}/${1} -d ${LOCAL_PREFIX}/${2} &> ${LOGFILE} &
+
+echo "See log file for progress: "${LOGFILE}
