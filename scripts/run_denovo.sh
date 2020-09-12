@@ -14,7 +14,7 @@ if [[ $# -ne 3 ]]; then
     exit
 fi
 
-let NUM_EXECUTORS=${3}
+let NUM_EXECUTORS=${3}-1
 
 $SPARK_HOME/bin/spark-submit --master ${MASTER_URL} --num-executors ${NUM_EXECUTORS} \
     --conf spark.yarn.appMasterEnv.CANNOLI_HOME=${CANNOLI_HOME_DIR} \
