@@ -8,6 +8,7 @@ import scala.sys.process
 import scala.concurrent.{Await, Future}
 import scala.concurrent.duration.Duration
 import org.apache.spark.sql.SparkSession
+import scala.math.{max, min}
 
 import scala.collection.mutable.ListBuffer
 import scala.collection.mutable.ArrayBuffer
@@ -160,6 +161,7 @@ object GenerateDenovoReference {
     val sampleFileName = options('input)
     val downloadFileName = options.getOrElse('download, null)
     val kmerVal = options.getOrElse('kmer, 51)
+    val minBatchSize = 3
 
     if (downloadFileName != null) {
       val downloadList =
@@ -177,7 +179,7 @@ object GenerateDenovoReference {
       // first download files using curl and store in HDFS
       downloadList
         .map(x => ConcurrentContext.executeAsync(runDownload(x)))
-        .mapPartitions(it => ConcurrentContext.awaitSliding(it, batchSize = maxDownloadTasks))
+        .mapPartitions(it => ConcurrentContext.awaitSliding(it, batchSize = max(maxDownloadTasks, minBatchSize)))
         .collect()
         .foreach(x => println(s"Finished downloading $x"))
 
@@ -200,14 +202,14 @@ object GenerateDenovoReference {
     sampleIDList
       .map(x => ConcurrentContext.executeAsync(runInterleave(x)))
       //.mapPartitions(it => ConcurrentContext.awaitBatch(it))
-      .mapPartitions(it => ConcurrentContext.awaitSliding(it, batchSize = maxTasks))
+      .mapPartitions(it => ConcurrentContext.awaitSliding(it, batchSize = max(maxTasks, minBatchSize)))
       .collect()
       .foreach(x => println(s"Finished interleaved FASTQ generation of $x"))
 
     sampleIDList
       .map(x => ConcurrentContext.executeAsync(runDenovo(x, kmerVal.toString.toInt)))
       //.mapPartitions(it => ConcurrentContext.awaitBatch(it))
-      .mapPartitions(it => ConcurrentContext.awaitSliding(it, batchSize = maxTasks))
+      .mapPartitions(it => ConcurrentContext.awaitSliding(it, batchSize = max(maxTasks, minBatchSize)))
       .collect()
       .foreach(x => println(s"Finished de novo assembly of $x"))
 
