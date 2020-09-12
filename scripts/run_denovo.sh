@@ -8,6 +8,7 @@ MASTER_URL="yarn --deploy-mode client"
 DATE=$(date "+%Y-%m-%d-%s")
 LOGFILE="/mydata/${USER}-denovo-${DATE}.log"
 EVA_JAR=${HOME}"/EVA/lib/eva-denovo_2.12-0.1.jar"
+DEFAULT_KMER_LEN=51
 
 if [[ $# -lt 3 ]]; then
     echo "Usage: run_denovo.sh <file containing sample IDs> <file containing FASTQ URLs> <num_nodes> [kmer_len]"
@@ -21,7 +22,7 @@ if [[ $# -lt 3 ]]; then
     echo "[kmer_len] - k-mer length; default is 51"
     exit
 elif [[ $# -eq 3 ]]; then
-    KMER_LEN=51
+    KMER_LEN=${DEFAULT_KMER_LEN}
 else
     KMER_LEN=${4}
 fi
