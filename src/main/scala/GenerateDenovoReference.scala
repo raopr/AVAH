@@ -58,6 +58,7 @@ object GenerateDenovoReference {
     Optional jar options:
       -d | --download <file>  input file containing URLs of FASTQ files to download; one per line
       -k | --kmer <INT>       k-mer length; default 51
+      -b | --batch <INT>      minimum batch size for outstanding futures; default 3
     """)
   }
 
@@ -65,11 +66,11 @@ object GenerateDenovoReference {
     println(s"Starting to download $x")
     val outputFileName = x.toString.split("/").last
     println("Output filename: ", outputFileName)
-    val curlCmd =
-      s"curl -sS $x | " + sys.env("HADOOP_HOME") + s"/bin/hdfs dfs -put - /$outputFileName "
-    println("Curl command: ", curlCmd)
     val hdfsCmd = sys.env("HADOOP_HOME") + "/bin/hdfs"
     val ret = (Seq("curl", "-sS", s"$x") #| Seq(s"$hdfsCmd", "dfs", "-put", "-", s"/$outputFileName")).!
+    val curlCmd =
+      s"curl -sS $x | " + sys.env("HADOOP_HOME") + s"/bin/hdfs dfs -put - /$outputFileName "
+    println(s"Download command: $curlCmd $ret")
     x
   }
 
@@ -145,6 +146,7 @@ object GenerateDenovoReference {
         case ("-i" | "--input") :: value :: tail => nextOption(map ++ Map('input -> value), tail)
         case ("-d" | "--download") :: value :: tail => nextOption(map ++ Map('download -> value), tail)
         case ("-k" | "--kmer") :: value :: tail => nextOption(map ++ Map('kmer -> value), tail)
+        case ("-b" | "--batch") :: value :: tail => nextOption(map ++ Map('batch -> value), tail)
         case value :: tail => println("Unknown option: "+value)
           usage()
           sys.exit(1)
@@ -161,7 +163,7 @@ object GenerateDenovoReference {
     val sampleFileName = options('input)
     val downloadFileName = options.getOrElse('download, null)
     val kmerVal = options.getOrElse('kmer, 51)
-    val minBatchSize = 3
+    val minBatchSize = options.getOrElse('batch, 3).toString.toInt
 
     if (downloadFileName != null) {
       val downloadList =
