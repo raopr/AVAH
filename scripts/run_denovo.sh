@@ -11,10 +11,10 @@ EVA_JAR=${HOME}"/EVA/lib/eva-denovo_2.12-0.1.jar"
 DEFAULT_KMER_LEN=51
 
 if [[ $# -lt 3 ]]; then
-    echo "Usage: run_denovo.sh <file containing sample IDs> <file containing FASTQ URLs> <num_nodes> [kmer_len]"
+    echo "Usage: run_denovo.sh <file1> <file2> <num_nodes> [kmer_len]"
     echo ""
     echo "Required arguments:"
-    echo "<file1> - file containing sample IDs, one per line"
+    echo "<file1> - file containing sample IDs (e.g., SRR077487), one per line"
     echo "<file2> - file containing URLs of FASTQ files, one per line"
     echo "<num_nodes> - number of nodes in the cluster"
     echo ""
