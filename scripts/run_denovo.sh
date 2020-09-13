@@ -2,6 +2,7 @@
 
 CANNOLI_HOME_DIR="/mydata/cannoli"
 SPARK_HOME_DIR="/mydata/spark"
+HOMEBREW_DIR="/home/linuxbrew/.linuxbrew"
 HDFS_PREFIX="hdfs://vm0:9000"
 LOCAL_PREFIX="file://"
 MASTER_URL="yarn --deploy-mode client"
@@ -32,8 +33,10 @@ let NUM_EXECUTORS=${3}-1
 $SPARK_HOME/bin/spark-submit --master ${MASTER_URL} --num-executors ${NUM_EXECUTORS} \
     --conf spark.yarn.appMasterEnv.CANNOLI_HOME=${CANNOLI_HOME_DIR} \
     --conf spark.yarn.appMasterEnv.SPARK_HOME=${SPARK_HOME_DIR} \
+    --conf spark.yarn.appMasterEnv.HOMEBREW_PREFIX=${HOMEBREW_DIR} \
     --conf spark.executorEnv.CANNOLI_HOME=${CANNOLI_HOME_DIR} \
     --conf spark.executorEnv.SPARK_HOME=${SPARK_HOME_DIR} \
+    --conf spark.executorEnv.HOMEBREW_PREFIX=${HOMEBREW_DIR} \
     ${EVA_JAR} -i ${LOCAL_PREFIX}/${1} -d ${LOCAL_PREFIX}/${2} -k ${KMER_LEN} &> ${LOGFILE} &
 
 echo "See log file for progress: "${LOGFILE}
