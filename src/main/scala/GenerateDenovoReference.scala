@@ -56,9 +56,10 @@ object GenerateDenovoReference {
       -i | --input <file>     input file containing sample IDs; one per line
 
     Optional jar options:
-      -d | --download <file>  input file containing URLs of FASTQ files to download; one per line
-      -k | --kmer <INT>       k-mer length; default 51
-      -b | --batch <INT>      minimum batch size for outstanding futures; default 3
+      -d | --download <filename>  input file containing URLs of FASTQ files to download (one per line)
+                                  if filename is 'file://NONE', then no FASTQ files are downloaded
+      -k | --kmer <INT>       k-mer length [default: 51]
+      -b | --batch <INT>      minimum batch size for outstanding futures [default: 3]
     """)
   }
 
@@ -165,7 +166,10 @@ object GenerateDenovoReference {
     val kmerVal = options.getOrElse('kmer, 51)
     val minBatchSize = options.getOrElse('batch, 3).toString.toInt
 
-    if (downloadFileName != null) {
+    val FILE_NONE = "file://NONE"
+    if (downloadFileName != null && downloadFileName.toString() != FILE_NONE) {
+      println(s"Starting to download FASTQ files in ${downloadFileName.toString}...")
+
       val downloadList =
         spark.sparkContext.textFile(downloadFileName.toString).repartition(numExecutors)
 
@@ -187,6 +191,9 @@ object GenerateDenovoReference {
 
       println("Completed all downloads")
     }
+    else {
+      println(s"FASTQ files in ${downloadFileName.toString} are assumed to be in HDFS")
+    }
 
     val sampleIDList = spark.sparkContext.textFile(sampleFileName.toString).repartition(numExecutors)
     val itemCounts = sampleIDList.glom.map(_.length).collect()
@@ -201,19 +208,32 @@ object GenerateDenovoReference {
     //val pairList = sequenceList.map(x => (x,1)).partitionBy(
       //new HashPartitioner(numExecutors))
 
-    sampleIDList
-      .map(x => ConcurrentContext.executeAsync(runInterleave(x)))
-      //.mapPartitions(it => ConcurrentContext.awaitBatch(it))
-      .mapPartitions(it => ConcurrentContext.awaitSliding(it, batchSize = max(maxTasks, minBatchSize)))
-      .collect()
-      .foreach(x => println(s"Finished interleaved FASTQ generation of $x"))
+    if (false) {
+      sampleIDList
+        .map(x => ConcurrentContext.executeAsync(runInterleave(x)))
+        //.mapPartitions(it => ConcurrentContext.awaitBatch(it))
+        .mapPartitions(it => ConcurrentContext.awaitSliding(it, batchSize = max(maxTasks, minBatchSize)))
+        .collect()
+        .foreach(x => println(s"Finished interleaved FASTQ generation of $x"))
 
-    sampleIDList
-      .map(x => ConcurrentContext.executeAsync(runDenovo(x, kmerVal.toString.toInt)))
-      //.mapPartitions(it => ConcurrentContext.awaitBatch(it))
-      .mapPartitions(it => ConcurrentContext.awaitSliding(it, batchSize = max(maxTasks, minBatchSize)))
-      .collect()
-      .foreach(x => println(s"Finished de novo assembly of $x"))
+      sampleIDList
+        .map(x => ConcurrentContext.executeAsync(runDenovo(x, kmerVal.toString.toInt)))
+        //.mapPartitions(it => ConcurrentContext.awaitBatch(it))
+        .mapPartitions(it => ConcurrentContext.awaitSliding(it, batchSize = max(maxTasks, minBatchSize)))
+        .collect()
+        .foreach(x => println(s"Finished de novo assembly of $x"))
+    }
+    else {
+      sampleIDList
+        .map(x => ConcurrentContext.executeAsync(runInterleave(x)))
+        //.mapPartitions(it => ConcurrentContext.awaitBatch(it))
+        .mapPartitions(it => ConcurrentContext.awaitSliding(it, batchSize = max(maxTasks, minBatchSize)))
+        .map(x => ConcurrentContext.executeAsync(runDenovo(x, kmerVal.toString.toInt)))
+        //.mapPartitions(it => ConcurrentContext.awaitBatch(it))
+        .mapPartitions(it => ConcurrentContext.awaitSliding(it, batchSize = max(maxTasks, minBatchSize)))
+        .collect()
+        .foreach(x => println(s"Finished interleaved FASTQ and de novo assembly of $x"))
+    }
 
     log.info("\uD83D\uDC49 Completed the generation")
     spark.stop()
