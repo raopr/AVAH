@@ -86,7 +86,7 @@ object GenerateDenovoReference {
     val retInterleave = Seq(s"$cannoliSubmit", "--master", "yarn", "--", "interleaveFastq",
                             s"$hdfsPrefix/${sampleID}_1.filt.fastq.gz",
                             s"$hdfsPrefix/${sampleID}_2.filt.fastq.gz",
-                            s"$hdfsPrefix/${sampleID}.ifq.gz").!
+                            s"$hdfsPrefix/${sampleID}.ifq").!
     println("Cannoli return values: ", retInterleave)
     x
   }
@@ -101,7 +101,7 @@ object GenerateDenovoReference {
     val dataDir = "/mydata"
     val copyCmd =
       sys.env("HADOOP_HOME") + "/bin/hdfs dfs -get -f " +
-        s" /$sampleID.ifq.gz $dataDir"
+        s" /$sampleID.ifq $dataDir"
     val retCopy = Process(copyCmd).!
 
     println(s"Completed HDFS copy...")
@@ -112,7 +112,7 @@ object GenerateDenovoReference {
     val cmd =
       s"$abyssDir/bin/abyss-pe j=30 k=$kmerVal -C $dataDir " +
       s" name=$sampleID " +
-      s" in=$dataDir/$sampleID.ifq.gz"
+      s" in=$dataDir/$sampleID.ifq"
     println(cmd)
     val abyssRet = Process(cmd).!
 
