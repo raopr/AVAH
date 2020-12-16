@@ -45,7 +45,7 @@ object ConcurrentContext {
   }
 }
 
-object GenerateDenovoReference {
+object GenomeProcessing {
   def usage(): Unit = {
     println("""
     Usage: spark-submit [Spark options] eva_some_version.jar [jar options]
@@ -54,15 +54,22 @@ object GenerateDenovoReference {
 
     Required jar options:
       -i | --input <file>     input file containing sample IDs; one per line
+      -c | --command <D|W|R|E>    D: denovo sequence generation;
+                                  V: variant analysis on whole genome sequences;
+                                  R: variant analysis on RNA-seq sequences;
+                                  E: variant analysis on whole exome sequences
 
     Optional jar options:
       -d | --download <filename>  input file containing URLs of FASTQ files to download (one per line)
                                   if filename is 'file://NONE', then no FASTQ files are downloaded
-      -k | --kmer <INT>       k-mer length [default: 51]
-      -b | --batch <INT>      minimum batch size for outstanding futures [default: 3]
+      -k | --kmer <INT>           k-mer length [default: 51]
+      -b | --batch <INT>          minimum batch size for outstanding futures [default: 3]
+      -n | --numnodes <INT>       size of cluster [default: 16]
+      -r | --reference <name>     reference genome [default: hs38]
     """)
   }
 
+  // Download
   def runDownload[T](x: T):T = {
     println(s"Starting to download $x")
     val outputFileName = x.toString.split("/").last
@@ -75,6 +82,7 @@ object GenerateDenovoReference {
     x
   }
 
+  // Interleave FASTQ
   def runInterleave[T](x: T):T = {
     println(s"Starting Cannoli on ($x)")
     val sampleID = x.toString
@@ -91,6 +99,26 @@ object GenerateDenovoReference {
     x
   }
 
+  // Variant analysis
+  def runVariantAnalysis[T](x: T, referenceGenome: String, numNodes: Int):T = {
+    println(s"Starting variant analysis on ($x)")
+    val sampleID = x.toString
+
+    //  ${HOME}/EVA/scripts/run_variant_analysis_adam.sh hs38 hdfs://vm0:9000/SRR062635_1.filt.fastq.gz hdfs://vm0:9000/SRR062635_2.filt.fastq.gz 16
+
+    val VASubmit = sys.env("HOME") + "/EVA/scripts/run_variant_analysis_adam.sh"
+    //val sparkMaster = "spark://vm0:7077"
+
+    val hdfsPrefix = "hdfs://vm0:9000"
+    val retVA = Seq(s"$VASubmit", s"$referenceGenome",
+      s"$hdfsPrefix/${sampleID}_1.filt.fastq.gz",
+      s"$hdfsPrefix/${sampleID}_2.filt.fastq.gz",
+      s"$numNodes").!
+    println("Variant analysis return values: ", retVA)
+    x
+  }
+
+  // Denovo assembly
   def runDenovo[T](x: T, kmerVal: Int):T = {
     println(s"Starting Abyss on ($x)")
     val sampleID = x.toString
@@ -145,9 +173,12 @@ object GenerateDenovoReference {
         case Nil => map
         case ("-h" | "--help") :: tail => usage(); sys.exit(0)
         case ("-i" | "--input") :: value :: tail => nextOption(map ++ Map('input -> value), tail)
+        case ("-c" | "--command") :: value :: tail => nextOption(map ++ Map('command -> value), tail)
         case ("-d" | "--download") :: value :: tail => nextOption(map ++ Map('download -> value), tail)
         case ("-k" | "--kmer") :: value :: tail => nextOption(map ++ Map('kmer -> value), tail)
         case ("-b" | "--batch") :: value :: tail => nextOption(map ++ Map('batch -> value), tail)
+        case ("-n" | "--numnodes") :: value :: tail => nextOption(map ++ Map('numnodes -> value), tail)
+        case ("-r" | "--reference") :: value :: tail => nextOption(map ++ Map('reference -> value), tail)
         case value :: tail => println("Unknown option: "+value)
           usage()
           sys.exit(1)
@@ -165,6 +196,15 @@ object GenerateDenovoReference {
     val downloadFileName = options.getOrElse('download, null)
     val kmerVal = options.getOrElse('kmer, 51)
     val minBatchSize = options.getOrElse('batch, 3).toString.toInt
+    val commandToExecute = options.getOrElse('command, null)
+    val numNodes = options.getOrElse('numnodes, 16).toString.toInt
+    val referenceGenome = options.getOrElse('reference, "hs38").toString
+
+    if (commandToExecute == null) {
+      println("Option -c | --command is required.")
+      usage()
+      sys.exit(1)
+    }
 
     val FILE_NONE = "file://NONE"
     if (downloadFileName != null && downloadFileName.toString() != FILE_NONE) {
@@ -206,36 +246,74 @@ object GenerateDenovoReference {
     val maxTasks = itemCounts.sum/itemCounts.length
 
     //val pairList = sequenceList.map(x => (x,1)).partitionBy(
-      //new HashPartitioner(numExecutors))
+    //new HashPartitioner(numExecutors))
 
-    if (false) {
-      sampleIDList
+    commandToExecute.toString() match {
+      case "D" =>
+        sampleIDList
         .map(x => ConcurrentContext.executeAsync(runInterleave(x)))
-        //.mapPartitions(it => ConcurrentContext.awaitBatch(it))
-        .mapPartitions(it => ConcurrentContext.awaitSliding(it, batchSize = max(maxTasks, minBatchSize)))
-        .collect()
-        .foreach(x => println(s"Finished interleaved FASTQ generation of $x"))
-
-      sampleIDList
-        .map(x => ConcurrentContext.executeAsync(runDenovo(x, kmerVal.toString.toInt)))
-        //.mapPartitions(it => ConcurrentContext.awaitBatch(it))
-        .mapPartitions(it => ConcurrentContext.awaitSliding(it, batchSize = max(maxTasks, minBatchSize)))
-        .collect()
-        .foreach(x => println(s"Finished de novo assembly of $x"))
-    }
-    else {
-      sampleIDList
-        .map(x => ConcurrentContext.executeAsync(runInterleave(x)))
-        //.mapPartitions(it => ConcurrentContext.awaitBatch(it))
         .mapPartitions(it => ConcurrentContext.awaitSliding(it, batchSize = max(maxTasks, minBatchSize)))
         .map(x => ConcurrentContext.executeAsync(runDenovo(x, kmerVal.toString.toInt)))
-        //.mapPartitions(it => ConcurrentContext.awaitBatch(it))
         .mapPartitions(it => ConcurrentContext.awaitSliding(it, batchSize = max(maxTasks, minBatchSize)))
         .collect()
         .foreach(x => println(s"Finished interleaved FASTQ and de novo assembly of $x"))
+
+      case "E" =>
+        sampleIDList
+          .map(x => ConcurrentContext.executeAsync(runInterleave(x)))
+          .mapPartitions(it => ConcurrentContext.awaitSliding(it, batchSize = max(maxTasks, minBatchSize)))
+          .map(x => ConcurrentContext.executeAsync(runDenovo(x, kmerVal.toString.toInt)))
+          .mapPartitions(it => ConcurrentContext.awaitSliding(it, batchSize = max(maxTasks, minBatchSize)))
+          .collect()
+          .foreach(x => println(s"Finished interleaved FASTQ and de novo assembly of $x"))
+
+      case "W" =>
+        sampleIDList
+          .map(x => ConcurrentContext.executeAsync(runVariantAnalysis(x, referenceGenome, numNodes)))
+          .mapPartitions(it => ConcurrentContext.awaitSliding(it, batchSize = max(maxTasks, minBatchSize)))
+          .collect()
+          .foreach(x => println(s"Finished variant analysis of whole genome sequence $x"))
+
+      case "R" =>
+        sampleIDList
+          .map(x => ConcurrentContext.executeAsync(runInterleave(x)))
+          .mapPartitions(it => ConcurrentContext.awaitSliding(it, batchSize = max(maxTasks, minBatchSize)))
+          .map(x => ConcurrentContext.executeAsync(runDenovo(x, kmerVal.toString.toInt)))
+          .mapPartitions(it => ConcurrentContext.awaitSliding(it, batchSize = max(maxTasks, minBatchSize)))
+          .collect()
+          .foreach(x => println(s"Finished interleaved FASTQ and de novo assembly of $x"))
+
+      case _ => println("Invalid command"); usage()
     }
 
-    log.info("\uD83D\uDC49 Completed the generation")
+//    if (false) {
+//      sampleIDList
+//        .map(x => ConcurrentContext.executeAsync(runInterleave(x)))
+//        //.mapPartitions(it => ConcurrentContext.awaitBatch(it))
+//        .mapPartitions(it => ConcurrentContext.awaitSliding(it, batchSize = max(maxTasks, minBatchSize)))
+//        .collect()
+//        .foreach(x => println(s"Finished interleaved FASTQ generation of $x"))
+//
+//      sampleIDList
+//        .map(x => ConcurrentContext.executeAsync(runDenovo(x, kmerVal.toString.toInt)))
+//        //.mapPartitions(it => ConcurrentContext.awaitBatch(it))
+//        .mapPartitions(it => ConcurrentContext.awaitSliding(it, batchSize = max(maxTasks, minBatchSize)))
+//        .collect()
+//        .foreach(x => println(s"Finished de novo assembly of $x"))
+//    }
+//    else {
+//      sampleIDList
+//        .map(x => ConcurrentContext.executeAsync(runInterleave(x)))
+//        //.mapPartitions(it => ConcurrentContext.awaitBatch(it))
+//        .mapPartitions(it => ConcurrentContext.awaitSliding(it, batchSize = max(maxTasks, minBatchSize)))
+//        .map(x => ConcurrentContext.executeAsync(runDenovo(x, kmerVal.toString.toInt)))
+//        //.mapPartitions(it => ConcurrentContext.awaitBatch(it))
+//        .mapPartitions(it => ConcurrentContext.awaitSliding(it, batchSize = max(maxTasks, minBatchSize)))
+//        .collect()
+//        .foreach(x => println(s"Finished interleaved FASTQ and de novo assembly of $x"))
+//    }
+
+    log.info("\uD83D\uDC49 Completed the genome processing successfully.")
     spark.stop()
   }
 }
