@@ -30,6 +30,7 @@ else
 fi
 
 let NUM_EXECUTORS=${3}-1
+COMMAND="D"
 
 $SPARK_HOME/bin/spark-submit --master ${MASTER_URL} --num-executors ${NUM_EXECUTORS} \
     --conf spark.yarn.appMasterEnv.CANNOLI_HOME=${CANNOLI_HOME_DIR} \
@@ -38,6 +39,6 @@ $SPARK_HOME/bin/spark-submit --master ${MASTER_URL} --num-executors ${NUM_EXECUT
     --conf spark.executorEnv.CANNOLI_HOME=${CANNOLI_HOME_DIR} \
     --conf spark.executorEnv.SPARK_HOME=${SPARK_HOME_DIR} \
     --conf spark.executorEnv.HOMEBREW_PREFIX=${HOMEBREW_DIR} \
-    ${EVA_JAR} -i ${LOCAL_PREFIX}/${1} -d ${LOCAL_PREFIX}/${2} -k ${KMER_LEN} &> ${LOGFILE} &
+    ${EVA_JAR} -i ${LOCAL_PREFIX}/${1} -d ${LOCAL_PREFIX}/${2} -c ${COMMAND} -k ${KMER_LEN} &> ${LOGFILE} &
 
 echo "See log file for progress: "${LOGFILE}
