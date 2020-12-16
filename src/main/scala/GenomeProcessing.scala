@@ -55,7 +55,7 @@ object GenomeProcessing {
     Required jar options:
       -i | --input <file>     input file containing sample IDs; one per line
       -c | --command <D|W|R|E>    D: denovo sequence generation;
-                                  V: variant analysis on whole genome sequences;
+                                  W: variant analysis on whole genome sequences;
                                   R: variant analysis on RNA-seq sequences;
                                   E: variant analysis on whole exome sequences
 
@@ -187,7 +187,7 @@ object GenomeProcessing {
 
     val options = nextOption(Map(),argList)
 
-    val spark = SparkSession.builder.appName("De novo sequence generation").getOrCreate()
+    val spark = SparkSession.builder.appName("Large-scale genome processing").getOrCreate()
     spark.sparkContext.setLogLevel("INFO")
     val log = Logger.getLogger(getClass.getName)
     log.info("\uD83D\uDC49 Starting the generation")
