@@ -10,6 +10,7 @@ DATE=$(date "+%Y-%m-%d-%s")
 LOGFILE="/mydata/${USER}-denovo-${DATE}.log"
 EVA_JAR=${HOME}"/EVA/lib/eva-denovo_2.12-0.1.jar"
 DEFAULT_REFERENCE="hs38"
+EVA_HOME=${HOME}"/EVA"
 
 if [[ $# -lt 3 ]]; then
     echo "Usage: run_variant_analysis.sh <file1> <file2> <num_nodes> [reference]"
@@ -37,9 +38,11 @@ $SPARK_HOME/bin/spark-submit --master ${MASTER_URL} --num-executors ${NUM_EXECUT
     --conf spark.yarn.appMasterEnv.CANNOLI_HOME=${CANNOLI_HOME_DIR} \
     --conf spark.yarn.appMasterEnv.SPARK_HOME=${SPARK_HOME_DIR} \
     --conf spark.yarn.appMasterEnv.HOMEBREW_PREFIX=${HOMEBREW_DIR} \
+    --conf spark.yarn.appMasterEnv.EVA_HOME=${EVA_HOME} \
     --conf spark.executorEnv.CANNOLI_HOME=${CANNOLI_HOME_DIR} \
     --conf spark.executorEnv.SPARK_HOME=${SPARK_HOME_DIR} \
     --conf spark.executorEnv.HOMEBREW_PREFIX=${HOMEBREW_DIR} \
+    --conf spark.executorEnv.EVA_HOME=${EVA_HOME} \
     ${EVA_JAR} -i ${LOCAL_PREFIX}/${1} -d ${LOCAL_PREFIX}/${2} -c ${COMMAND} -r ${REF_GENOME} -n ${3} &> ${LOGFILE} &
 
 echo "See log file for progress: "${LOGFILE}

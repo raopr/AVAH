@@ -104,7 +104,7 @@ object GenomeProcessing {
     println(s"Starting variant analysis on ($x)")
     val sampleID = x.toString
 
-    val VASubmit = sys.env("HOME") + "/EVA/scripts/run_variant_analysis_adam.sh"
+    val VASubmit = sys.env("EVA_HOME") + "/scripts/run_variant_analysis_adam.sh"
     //val sparkMaster = "spark://vm0:7077"
 
     val useYARN = "y"
