@@ -104,16 +104,17 @@ object GenomeProcessing {
     println(s"Starting variant analysis on ($x)")
     val sampleID = x.toString
 
-    //  ${HOME}/EVA/scripts/run_variant_analysis_adam.sh hs38 hdfs://vm0:9000/SRR062635_1.filt.fastq.gz hdfs://vm0:9000/SRR062635_2.filt.fastq.gz 16
-
     val VASubmit = sys.env("HOME") + "/EVA/scripts/run_variant_analysis_adam.sh"
     //val sparkMaster = "spark://vm0:7077"
 
+    val useYARN = "y"
     val hdfsPrefix = "hdfs://vm0:9000"
     val retVA = Seq(s"$VASubmit", s"$referenceGenome",
       s"$hdfsPrefix/${sampleID}_1.filt.fastq.gz",
       s"$hdfsPrefix/${sampleID}_2.filt.fastq.gz",
-      s"$numNodes").!
+      s"$numNodes",
+      s"$sampleID",
+      s"$useYARN").!
     println("Variant analysis return values: ", retVA)
     x
   }
