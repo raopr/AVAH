@@ -36,3 +36,23 @@ To see YARN queues:
 ```
 mapred queue -list
 ```
+
+To change YARN's scheduler configuration via command line
+
+```
+yarn schedulerconf
+```
+
+Examples:
+
+```
+yarn schedulerconf -global yarn.scheduler.maximum-allocation-mb=16384
+```
+
+```
+yarn schedulerconf -global yarn.scheduler.maximum-allocation-vcores=32
+```
+
+```
+yarn schedulerconf -global yarn.scheduler.maximum-allocation-mb=16384,yarn.scheduler.maximum-allocation-vcores=32
+```

@@ -104,7 +104,7 @@ object GenomeProcessing {
     println(s"Starting variant analysis on ($x)")
     val sampleID = x.toString
 
-    val VASubmit = sys.env("EVA_HOME") + "/scripts/run_variant_analysis_adam.sh"
+    val VASubmit = sys.env("EVA_HOME") + "/scripts/run_variant_analysis_adam_basic.sh"
     //val sparkMaster = "spark://vm0:7077"
 
     val useYARN = "y"
@@ -116,6 +116,7 @@ object GenomeProcessing {
       s"$sampleID",
       s"$useYARN").!
     println("Variant analysis return values: ", retVA)
+
     x
   }
 
@@ -200,6 +201,9 @@ object GenomeProcessing {
     val commandToExecute = options.getOrElse('command, null)
     val numNodes = options.getOrElse('numnodes, 16).toString.toInt
     val referenceGenome = options.getOrElse('reference, "hs38").toString
+
+    println("Reference genome: ", referenceGenome)
+    println("Num. nodes: ", numNodes)
 
     if (commandToExecute == null) {
       println("Option -c | --command is required.")
