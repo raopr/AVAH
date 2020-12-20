@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
 CANNOLI_HOME_DIR="/mydata/cannoli"
+ADAM_HOME_DIR="/mydata/cannoli"
 SPARK_HOME_DIR="/mydata/spark"
 HOMEBREW_DIR="/home/linuxbrew/.linuxbrew"
 HDFS_PREFIX="hdfs://vm0:9000"
@@ -36,10 +37,12 @@ COMMAND="W"
 
 $SPARK_HOME/bin/spark-submit --master ${MASTER_URL} --num-executors ${NUM_EXECUTORS} \
     --conf spark.yarn.appMasterEnv.CANNOLI_HOME=${CANNOLI_HOME_DIR} \
+    --conf spark.yarn.appMasterEnv.ADAM_HOME=${ADAM_HOME_DIR} \
     --conf spark.yarn.appMasterEnv.SPARK_HOME=${SPARK_HOME_DIR} \
     --conf spark.yarn.appMasterEnv.HOMEBREW_PREFIX=${HOMEBREW_DIR} \
     --conf spark.yarn.appMasterEnv.EVA_HOME=${EVA_HOME} \
     --conf spark.executorEnv.CANNOLI_HOME=${CANNOLI_HOME_DIR} \
+    --conf spark.executorEnv.ADAM_HOME=${ADAM_HOME_DIR} \
     --conf spark.executorEnv.SPARK_HOME=${SPARK_HOME_DIR} \
     --conf spark.executorEnv.HOMEBREW_PREFIX=${HOMEBREW_DIR} \
     --conf spark.executorEnv.EVA_HOME=${EVA_HOME} \

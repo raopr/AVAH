@@ -56,3 +56,9 @@ yarn schedulerconf -global yarn.scheduler.maximum-allocation-vcores=32
 ```
 yarn schedulerconf -global yarn.scheduler.maximum-allocation-mb=16384,yarn.scheduler.maximum-allocation-vcores=32
 ```
+
+# To check status
+
+```
+yarn queue -status default
+```
