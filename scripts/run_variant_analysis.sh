@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 CANNOLI_HOME_DIR="/mydata/cannoli"
-ADAM_HOME_DIR="/mydata/cannoli"
+ADAM_HOME_DIR="/mydata/adam"
 SPARK_HOME_DIR="/mydata/spark"
 HOMEBREW_DIR="/home/linuxbrew/.linuxbrew"
 HDFS_PREFIX="hdfs://vm0:9000"
