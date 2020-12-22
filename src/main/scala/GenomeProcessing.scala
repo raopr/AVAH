@@ -38,7 +38,8 @@ object ConcurrentContext {
   }
 
   def awaitSliding[T](it: Iterator[Future[T]], batchSize: Int = 3, timeout: Duration = Inf): Iterator[T] = {
-    val slidingIterator = it.sliding(batchSize - 1).withPartial(true) //Our look ahead (hasNext) will auto start the nth future in the batch
+    //val slidingIterator = it.sliding(batchSize - 1).withPartial(true) //Our look ahead (hasNext) will auto start the nth future in the batch
+    val slidingIterator = it.sliding(batchSize - 1) //Our look ahead (hasNext) will auto start the nth future in the batch
     val (initIterator, tailIterator) = slidingIterator.span(_ => slidingIterator.hasNext)
     initIterator.map( futureBatch => Await.result(futureBatch.head, timeout)) ++
       tailIterator.flatMap( lastBatch => Await.result(Future.sequence(lastBatch), timeout))
