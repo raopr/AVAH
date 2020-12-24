@@ -29,7 +29,7 @@ if [[ $# -lt 3 ]]; then
 elif [[ $# -eq 3 ]]; then
     REF_GENOME=${DEFAULT_REFERENCE}
 else
-    REF_GENOME=${4}
+    REF_GENOME=${5}
 fi
 
 let NUM_EXECUTORS=${3}-1
