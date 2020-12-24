@@ -13,7 +13,7 @@ EVA_JAR=${HOME}"/EVA/lib/eva-denovo_2.12-0.1.jar"
 DEFAULT_REFERENCE="hs38"
 EVA_HOME=${HOME}"/EVA"
 
-if [[ $# -lt 3 ]]; then
+if [[ $# -lt 4 ]]; then
     echo "Usage: run_variant_analysis.sh <file1> <file2> <num_nodes> <batch_size> [reference]"
     echo ""
     echo "Required arguments:"
