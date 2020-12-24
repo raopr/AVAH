@@ -14,13 +14,14 @@ DEFAULT_REFERENCE="hs38"
 EVA_HOME=${HOME}"/EVA"
 
 if [[ $# -lt 3 ]]; then
-    echo "Usage: run_variant_analysis.sh <file1> <file2> <num_nodes> [reference]"
+    echo "Usage: run_variant_analysis.sh <file1> <file2> <num_nodes> <batch_size> [reference]"
     echo ""
     echo "Required arguments:"
     echo "<file1> - file containing sample IDs (e.g., SRR077487), one per line"
     echo "<file2> or NONE - file containing URLs of FASTQ files to download (one per line)"
     echo "                  NONE means don't download any FASTQ files"
     echo "<num_nodes> - number of nodes in the cluster"
+    echo "<batch_size> - batch size for outstanding futures"
     echo ""
     echo "Optional arguments: "
     echo "[reference] - reference genome [default: hs38]"
@@ -46,6 +47,6 @@ $SPARK_HOME/bin/spark-submit --master ${MASTER_URL} --num-executors ${NUM_EXECUT
     --conf spark.executorEnv.SPARK_HOME=${SPARK_HOME_DIR} \
     --conf spark.executorEnv.HOMEBREW_PREFIX=${HOMEBREW_DIR} \
     --conf spark.executorEnv.EVA_HOME=${EVA_HOME} \
-    ${EVA_JAR} -i ${LOCAL_PREFIX}/${1} -d ${LOCAL_PREFIX}/${2} -c ${COMMAND} -r ${REF_GENOME} -n ${3} &> ${LOGFILE} &
+    ${EVA_JAR} -i ${LOCAL_PREFIX}/${1} -d ${LOCAL_PREFIX}/${2} -c ${COMMAND} -r ${REF_GENOME} -n ${3} -b ${4} &> ${LOGFILE} &
 
 echo "See log file for progress: "${LOGFILE}

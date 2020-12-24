@@ -93,8 +93,8 @@ object GenomeProcessing {
     //val sparkMaster = "spark://vm0:7077"
     val hdfsPrefix = "hdfs://vm0:9000"
     val retInterleave = Seq(s"$cannoliSubmit", "--master", "yarn", "--", "interleaveFastq",
-                            s"$hdfsPrefix/${sampleID}_1.filt.fastq.gz",
-                            s"$hdfsPrefix/${sampleID}_2.filt.fastq.gz",
+                            s"$hdfsPrefix/${sampleID}_1.fastq.gz",
+                            s"$hdfsPrefix/${sampleID}_2.fastq.gz",
                             s"$hdfsPrefix/${sampleID}.ifq").!
     println("Cannoli return values: ", retInterleave)
     x
@@ -111,8 +111,8 @@ object GenomeProcessing {
     val useYARN = "y"
     val hdfsPrefix = "hdfs://vm0:9000"
     val retVA = Seq(s"$VASubmit", s"$referenceGenome",
-      s"$hdfsPrefix/${sampleID}_1.filt.fastq.gz",
-      s"$hdfsPrefix/${sampleID}_2.filt.fastq.gz",
+      s"$hdfsPrefix/${sampleID}_1.fastq.gz",
+      s"$hdfsPrefix/${sampleID}_2.fastq.gz",
       s"$numNodes",
       s"$sampleID",
       s"$useYARN").!
@@ -276,7 +276,7 @@ object GenomeProcessing {
       case "W" =>
         sampleIDList
           .map(x => ConcurrentContext.executeAsync(runVariantAnalysis(x, referenceGenome, numNodes)))
-          .mapPartitions(it => ConcurrentContext.awaitSliding(it, batchSize = max(maxTasks, minBatchSize)))
+          .mapPartitions(it => ConcurrentContext.awaitSliding(it, batchSize = min(maxTasks, minBatchSize)))
           .collect()
           .foreach(x => println(s"Finished variant analysis of whole genome sequence $x"))
 
