@@ -26,7 +26,7 @@ if [[ $# -lt 3 ]]; then
     echo "Optional arguments: "
     echo "[reference] - reference genome [default: hs38]"
     exit
-elif [[ $# -eq 3 ]]; then
+elif [[ $# -eq 4 ]]; then
     REF_GENOME=${DEFAULT_REFERENCE}
 else
     REF_GENOME=${5}
