@@ -72,14 +72,16 @@ object GenomeProcessing {
 
   // Download
   def runDownload[T](x: T):T = {
-    println(s"Starting to download $x")
+    val beginTime = Calendar.getInstance().getTime()
+    println(s"Starting to download $x at $beginTime")
     val outputFileName = x.toString.split("/").last
     println("Output filename: ", outputFileName)
     val hdfsCmd = sys.env("HADOOP_HOME") + "/bin/hdfs"
     val ret = (Seq("curl", "-sS", s"$x") #| Seq(s"$hdfsCmd", "dfs", "-put", "-", s"/$outputFileName")).!
     val curlCmd =
       s"curl -sS $x | " + sys.env("HADOOP_HOME") + s"/bin/hdfs dfs -put - /$outputFileName "
-    println(s"Download command: $curlCmd $ret")
+    val endTime = Calendar.getInstance().getTime()
+    println(s"Download command: $curlCmd $ret at $endTime")
     x
   }
 
@@ -102,7 +104,8 @@ object GenomeProcessing {
 
   // Variant analysis
   def runVariantAnalysis[T](x: T, referenceGenome: String, numNodes: Int):T = {
-    println(s"Starting variant analysis on ($x)")
+    val beginTime = Calendar.getInstance().getTime()
+    println(s"Starting variant analysis on ($x) at $beginTime")
     val sampleID = x.toString
 
     val VASubmit = sys.env("EVA_HOME") + "/scripts/run_variant_analysis_adam_basic.sh"
@@ -116,14 +119,17 @@ object GenomeProcessing {
       s"$numNodes",
       s"$sampleID",
       s"$useYARN").!
-    println("Variant analysis return values: ", retVA)
+
+    val endTime = Calendar.getInstance().getTime()
+    println(s"Variant analysis on ($x) ended at $endTime; return values $retVA")
 
     x
   }
 
   // Denovo assembly
   def runDenovo[T](x: T, kmerVal: Int):T = {
-    println(s"Starting Abyss on ($x)")
+    val beginTime = Calendar.getInstance().getTime()
+    println(s"Starting Abyss on ($x) at $beginTime")
     val sampleID = x.toString
     val cleanUp = "rm -rf /mydata/$sampleID*"
     val cleanRet = Process(cleanUp).!
@@ -157,7 +163,8 @@ object GenomeProcessing {
         s" $dataDir/$sampleID-scaffolds.fa /"
     println(cmdToCopyFa)
     val facopyRet = Process(cmdToCopyFa).!
-    println("Abyss return values: ", cleanRet, retCopy, abyssRet, facopyRet)
+    val endTime = Calendar.getInstance().getTime()
+    println(s"Abyss ended at ${endTime}, return values: ", cleanRet, retCopy, abyssRet, facopyRet)
     x
   }
 
