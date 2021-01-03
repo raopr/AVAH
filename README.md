@@ -11,6 +11,8 @@ Hadoop 3+ must use `etc/hadoop/workers` to list the data nodes; always check usi
 
 `cd EVA/cluster_config; ./cluster_config <num_nodes> spark3`
 
+2. Make sure the `reference sequences` are copied to each node
+
 ## How to run the JAR
 
 ```
@@ -73,4 +75,14 @@ yarn queue -status default
 
 ```
 yarn logs -applicationId <application_ID>
+```
+
+## To view cluster usage
+
+```
+yarn top
+```
+
+```
+yarn node -all -list
 ```
