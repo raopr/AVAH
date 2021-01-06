@@ -81,13 +81,14 @@ object GenomeProcessing {
     val curlCmd =
       s"curl -sS $x | " + sys.env("HADOOP_HOME") + s"/bin/hdfs dfs -put - /$outputFileName "
     val endTime = Calendar.getInstance().getTime()
-    println(s"Download command: $curlCmd $ret at $endTime")
+    println(s"Completed download command: $curlCmd $ret at $endTime")
     x
   }
 
   // Interleave FASTQ
   def runInterleave[T](x: T):T = {
-    println(s"Starting Cannoli on ($x)")
+    val beginTime = Calendar.getInstance().getTime()
+    println(s"Starting Interleave FASTQ on ($x) at $beginTime")
     val sampleID = x.toString
 
     // Create interleaved fastq files
@@ -98,7 +99,8 @@ object GenomeProcessing {
                             s"$hdfsPrefix/${sampleID}_1.fastq.gz",
                             s"$hdfsPrefix/${sampleID}_2.fastq.gz",
                             s"$hdfsPrefix/${sampleID}.ifq").!
-    println("Cannoli return values: ", retInterleave)
+    val endTime = Calendar.getInstance().getTime()
+    println(s"Completed interleave FASTQ on ($x) at ${endTime}, return values: $retInterleave")
     x
   }
 
@@ -121,10 +123,103 @@ object GenomeProcessing {
       s"$useYARN").!
 
     val endTime = Calendar.getInstance().getTime()
-    println(s"Variant analysis on ($x) ended at $endTime; return values $retVA")
+    println(s"Completed variant analysis on ($x) ended at $endTime; return values $retVA")
 
     x
   }
+
+  // BWA
+  def runBWA[T](x: T, referenceGenome: String):T = {
+    val beginTime = Calendar.getInstance().getTime()
+    println(s"Starting BWA on ($x) at $beginTime")
+    val sampleID = x.toString
+
+//    ${CANNOLI_SUBMIT} --master ${SPARK_MASTER} --driver-memory ${DRIVER_MEMORY} --num-executors ${NUM_EXECUTORS} --executor-cores ${NUM_CORES} --executor-memory ${EXECUTOR_MEMORY} \
+//      -- bwaMem ${HDFS_PREFIX}/${INPUT_FILE}.ifq ${HDFS_PREFIX}/${INPUT_FILE}.bam \
+//      -executable ${BWA} -sample_id mysample -index ${REFERENCE} -sequence_dictionary ${DICT} -single -add_files
+
+    val cannoliSubmit = sys.env("CANNOLI_HOME") + "/exec/cannoli-submit"
+    //val sparkMaster = "spark://vm0:7077"
+    val hdfsPrefix = "hdfs://vm0:9000"
+    val bwaCmd = sys.env("BWA_HOME") + "/bwa"
+    val retBWA = Seq(s"$cannoliSubmit", "--master", "yarn", "--", "bwaMem",
+      s"$hdfsPrefix/${sampleID}.ifq",
+      s"$hdfsPrefix/${sampleID}.bam",
+      "-executable",
+      s"$bwaCmd",
+      "-sample_id",
+      "mysample",
+      "-index",
+      s"file:///mydata/$referenceGenome.fa",
+      "-sequence_dictionary",
+      s"file:///mydata/$referenceGenome.dict",
+      "-single",
+      "-add_files").!
+
+    // Delete $sampleId.bam_* files
+    val hdfsCmd = sys.env("HADOOP_HOME") + "/bin/hdfs"
+    val retDel = Seq(s"$hdfsCmd", "dfs", "-rm", "-r", s"/${sampleID}.bam_*").!
+    val endTime = Calendar.getInstance().getTime()
+    println(s"Completed BWA on ($x) ended at $endTime; return values bwa: $retBWA, delete: $retDel")
+
+    x
+  }
+
+  // Sort and Mark Duplicates
+  def runSortMarkDup[T](x: T):T = {
+    val beginTime = Calendar.getInstance().getTime()
+    println(s"Starting sort/mark duplicates on ($x) at $beginTime")
+    val sampleID = x.toString
+
+//    ${ADAM_SUBMIT} --master ${SPARK_MASTER} --driver-memory ${DRIVER_MEMORY} --num-executors ${NUM_EXECUTORS} --executor-cores ${NUM_CORES} --executor-memory ${EXECUTOR_MEMORY} \
+//      -- transformAlignments ${HDFS_PREFIX}/${INPUT_FILE}.bam ${HDFS_PREFIX}/${INPUT_FILE}.bam.adam \
+//      -mark_duplicate_reads -sort_by_reference_position_and_index
+
+    val adamSubmit = sys.env("ADAM_HOME") + "/exec/adam-submit"
+    //val sparkMaster = "spark://vm0:7077"
+    val hdfsPrefix = "hdfs://vm0:9000"
+    val retSortDup = Seq(s"$adamSubmit", "--master", "yarn", "--", "transformAlignments",
+      s"$hdfsPrefix/${sampleID}.bam",
+      s"$hdfsPrefix/${sampleID}.bam.adam",
+      "-mark_duplicate_reads",
+      "-sort_by_reference_position_and_index").!
+
+    val endTime = Calendar.getInstance().getTime()
+    println(s"Completed sort/mark duplicates on ($x) ended at $endTime; return values $retSortDup")
+
+    x
+  }
+
+  // Sort and Mark Duplicates
+  def runFreebayes[T](x: T, referenceGenome: String):T = {
+    val beginTime = Calendar.getInstance().getTime()
+    println(s"Starting Freebayes on ($x) at $beginTime")
+    val sampleID = x.toString
+
+//    ${CANNOLI_SUBMIT} --master ${SPARK_MASTER} --driver-memory ${DRIVER_MEMORY} --num-executors ${NUM_EXECUTORS} --executor-cores ${NUM_CORES} --executor-memory ${EXECUTOR_MEMORY} \
+//      -- freebayes ${HDFS_PREFIX}/${INPUT_FILE}.bam.adam ${HDFS_PREFIX}/${INPUT_FILE}.vcf \
+//      -executable ${FREE_BAYES} -reference ${REFERENCE} -add_files -single
+
+    val cannoliSubmit = sys.env("CANNOLI_HOME") + "/exec/cannoli-submit"
+    //val sparkMaster = "spark://vm0:7077"
+    val hdfsPrefix = "hdfs://vm0:9000"
+    val freeBayesCmd = sys.env("FREEBAYES_HOME") + "/bin/freebayes"
+    val retFreebayes = Seq(s"$cannoliSubmit", "--master", "yarn", "--", "freebayes",
+      s"$hdfsPrefix/${sampleID}.bam.adam",
+      s"$hdfsPrefix/${sampleID}.vcf",
+      "-executable",
+      s"$freeBayesCmd/bin/freebayes",
+      "-reference",
+      s"$referenceGenome",
+      "-add_files",
+      "-single").!
+
+    val endTime = Calendar.getInstance().getTime()
+    println(s"Completed Freebayes on ($x) ended at $endTime; return values $retFreebayes")
+
+    x
+  }
+
 
   // Denovo assembly
   def runDenovo[T](x: T, kmerVal: Int):T = {
@@ -281,11 +376,22 @@ object GenomeProcessing {
           .foreach(x => println(s"Finished interleaved FASTQ and de novo assembly of $x"))
 
       case "W" =>
-        sampleIDList
-          .map(x => ConcurrentContext.executeAsync(runVariantAnalysis(x, referenceGenome, numNodes)))
-          .mapPartitions(it => ConcurrentContext.awaitSliding(it, batchSize = min(maxTasks, minBatchSize)))
-          .collect()
-          .foreach(x => println(s"Finished variant analysis of whole genome sequence $x"))
+//        sampleIDList
+//          .map(x => ConcurrentContext.executeAsync(runVariantAnalysis(x, referenceGenome, numNodes)))
+//          .mapPartitions(it => ConcurrentContext.awaitSliding(it, batchSize = min(maxTasks, minBatchSize)))
+//          .collect()
+//          .foreach(x => println(s"Finished variant analysis of whole genome sequence $x"))
+          sampleIDList
+            .map(x => ConcurrentContext.executeAsync(runInterleave(x)))
+            .mapPartitions(it => ConcurrentContext.awaitSliding(it, batchSize = min(maxTasks, minBatchSize)))
+            .map(x => ConcurrentContext.executeAsync(runBWA(x, referenceGenome)))
+            .mapPartitions(it => ConcurrentContext.awaitSliding(it, batchSize = min(maxTasks, minBatchSize)))
+            .map(x => ConcurrentContext.executeAsync(runSortMarkDup(x)))
+            .mapPartitions(it => ConcurrentContext.awaitSliding(it, batchSize = min(maxTasks, minBatchSize)))
+            .map(x => ConcurrentContext.executeAsync(runFreebayes(x, referenceGenome)))
+            .mapPartitions(it => ConcurrentContext.awaitSliding(it, batchSize = min(maxTasks, minBatchSize)))
+            .collect()
+            .foreach(x => println(s"Finished basic variant analysis of whole genome sequence $x"))
 
       case "R" =>
         sampleIDList
