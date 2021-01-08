@@ -43,43 +43,43 @@ COMMAND="W"
 $HADOOP_HOME/bin/hdfs dfs -rm -r /*.ifq /*.bam* /*.vcf*
 
 if [[ $4 -gt 0 ]]; then
-$SPARK_HOME/bin/spark-submit --master ${MASTER_URL} --num-executors ${NUM_EXECUTORS} \
-    --conf spark.yarn.appMasterEnv.CANNOLI_HOME=${CANNOLI_HOME_DIR} \
-    --conf spark.yarn.appMasterEnv.ADAM_HOME=${ADAM_HOME_DIR} \
-    --conf spark.yarn.appMasterEnv.SPARK_HOME=${SPARK_HOME_DIR} \
-    --conf spark.yarn.appMasterEnv.HADOOP_HOME=${HADOOP_HOME_DIR} \
-    --conf spark.yarn.appMasterEnv.HOMEBREW_PREFIX=${HOMEBREW_DIR} \
-    --conf spark.yarn.appMasterEnv.EVA_HOME=${EVA_HOME} \
-    --conf spark.yarn.appMasterEnv.BWA_HOME=${BWA_HOME} \
-    --conf spark.yarn.appMasterEnv.FREEBAYES_HOME=${FREEBAYES_HOME} \
-    --conf spark.executorEnv.CANNOLI_HOME=${CANNOLI_HOME_DIR} \
-    --conf spark.executorEnv.ADAM_HOME=${ADAM_HOME_DIR} \
-    --conf spark.executorEnv.SPARK_HOME=${SPARK_HOME_DIR} \
-    --conf spark.executorEnv.HADOOP_HOME=${HADOOP_HOME_DIR} \
-    --conf spark.executorEnv.HOMEBREW_PREFIX=${HOMEBREW_DIR} \
-    --conf spark.executorEnv.EVA_HOME=${EVA_HOME} \
-    --conf spark.executorEnv.BWA_HOME=${BWA_HOME} \
-    --conf spark.executorEnv.FREEBAYES_HOME=${FREEBAYES_HOME} \
-    ${EVA_JAR} -i ${LOCAL_PREFIX}/${1} -d ${LOCAL_PREFIX}/${2} -c ${COMMAND} -r ${REF_GENOME} -n ${3} -b ${4} &> ${LOGFILE} &
+    $SPARK_HOME/bin/spark-submit --master ${MASTER_URL} --num-executors ${NUM_EXECUTORS} \
+        --conf spark.yarn.appMasterEnv.CANNOLI_HOME=${CANNOLI_HOME_DIR} \
+        --conf spark.yarn.appMasterEnv.ADAM_HOME=${ADAM_HOME_DIR} \
+        --conf spark.yarn.appMasterEnv.SPARK_HOME=${SPARK_HOME_DIR} \
+        --conf spark.yarn.appMasterEnv.HADOOP_HOME=${HADOOP_HOME_DIR} \
+        --conf spark.yarn.appMasterEnv.HOMEBREW_PREFIX=${HOMEBREW_DIR} \
+        --conf spark.yarn.appMasterEnv.EVA_HOME=${EVA_HOME} \
+        --conf spark.yarn.appMasterEnv.BWA_HOME=${BWA_HOME} \
+        --conf spark.yarn.appMasterEnv.FREEBAYES_HOME=${FREEBAYES_HOME} \
+        --conf spark.executorEnv.CANNOLI_HOME=${CANNOLI_HOME_DIR} \
+        --conf spark.executorEnv.ADAM_HOME=${ADAM_HOME_DIR} \
+        --conf spark.executorEnv.SPARK_HOME=${SPARK_HOME_DIR} \
+        --conf spark.executorEnv.HADOOP_HOME=${HADOOP_HOME_DIR} \
+        --conf spark.executorEnv.HOMEBREW_PREFIX=${HOMEBREW_DIR} \
+        --conf spark.executorEnv.EVA_HOME=${EVA_HOME} \
+        --conf spark.executorEnv.BWA_HOME=${BWA_HOME} \
+        --conf spark.executorEnv.FREEBAYES_HOME=${FREEBAYES_HOME} \
+        ${EVA_JAR} -i ${LOCAL_PREFIX}/${1} -d ${LOCAL_PREFIX}/${2} -c ${COMMAND} -r ${REF_GENOME} -n ${3} -b ${4} &> ${LOGFILE} &
 else
-$SPARK_HOME/bin/spark-submit --master ${MASTER_URL} --num-executors ${NUM_EXECUTORS} \
-    --conf spark.yarn.appMasterEnv.CANNOLI_HOME=${CANNOLI_HOME_DIR} \
-    --conf spark.yarn.appMasterEnv.ADAM_HOME=${ADAM_HOME_DIR} \
-    --conf spark.yarn.appMasterEnv.SPARK_HOME=${SPARK_HOME_DIR} \
-    --conf spark.yarn.appMasterEnv.HADOOP_HOME=${HADOOP_HOME_DIR} \
-    --conf spark.yarn.appMasterEnv.HOMEBREW_PREFIX=${HOMEBREW_DIR} \
-    --conf spark.yarn.appMasterEnv.EVA_HOME=${EVA_HOME} \
-    --conf spark.yarn.appMasterEnv.BWA_HOME=${BWA_HOME} \
-    --conf spark.yarn.appMasterEnv.FREEBAYES_HOME=${FREEBAYES_HOME} \
-    --conf spark.executorEnv.CANNOLI_HOME=${CANNOLI_HOME_DIR} \
-    --conf spark.executorEnv.ADAM_HOME=${ADAM_HOME_DIR} \
-    --conf spark.executorEnv.SPARK_HOME=${SPARK_HOME_DIR} \
-    --conf spark.executorEnv.HADOOP_HOME=${HADOOP_HOME_DIR} \
-    --conf spark.executorEnv.HOMEBREW_PREFIX=${HOMEBREW_DIR} \
-    --conf spark.executorEnv.EVA_HOME=${EVA_HOME} \
-    --conf spark.executorEnv.BWA_HOME=${BWA_HOME} \
-    --conf spark.executorEnv.FREEBAYES_HOME=${FREEBAYES_HOME} \
-    ${EVA_JAR} -i ${LOCAL_PREFIX}/${1} -d ${LOCAL_PREFIX}/${2} -c ${COMMAND} -r ${REF_GENOME} -n ${3} -b ${4} -s &> ${LOGFILE} &
+    $SPARK_HOME/bin/spark-submit --master ${MASTER_URL} --num-executors ${NUM_EXECUTORS} \
+        --conf spark.yarn.appMasterEnv.CANNOLI_HOME=${CANNOLI_HOME_DIR} \
+        --conf spark.yarn.appMasterEnv.ADAM_HOME=${ADAM_HOME_DIR} \
+        --conf spark.yarn.appMasterEnv.SPARK_HOME=${SPARK_HOME_DIR} \
+        --conf spark.yarn.appMasterEnv.HADOOP_HOME=${HADOOP_HOME_DIR} \
+        --conf spark.yarn.appMasterEnv.HOMEBREW_PREFIX=${HOMEBREW_DIR} \
+        --conf spark.yarn.appMasterEnv.EVA_HOME=${EVA_HOME} \
+        --conf spark.yarn.appMasterEnv.BWA_HOME=${BWA_HOME} \
+        --conf spark.yarn.appMasterEnv.FREEBAYES_HOME=${FREEBAYES_HOME} \
+        --conf spark.executorEnv.CANNOLI_HOME=${CANNOLI_HOME_DIR} \
+        --conf spark.executorEnv.ADAM_HOME=${ADAM_HOME_DIR} \
+        --conf spark.executorEnv.SPARK_HOME=${SPARK_HOME_DIR} \
+        --conf spark.executorEnv.HADOOP_HOME=${HADOOP_HOME_DIR} \
+        --conf spark.executorEnv.HOMEBREW_PREFIX=${HOMEBREW_DIR} \
+        --conf spark.executorEnv.EVA_HOME=${EVA_HOME} \
+        --conf spark.executorEnv.BWA_HOME=${BWA_HOME} \
+        --conf spark.executorEnv.FREEBAYES_HOME=${FREEBAYES_HOME} \
+        ${EVA_JAR} -i ${LOCAL_PREFIX}/${1} -d ${LOCAL_PREFIX}/${2} -c ${COMMAND} -r ${REF_GENOME} -n ${3} -b ${4} -s &> ${LOGFILE} &
 fi
 
 echo "See log file for progress: "${LOGFILE}
