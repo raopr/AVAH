@@ -39,6 +39,9 @@ let NUM_EXECUTORS=${3}-1
 
 COMMAND="W"
 
+# Delete *.ifq, *.bam*, *.vcf* files
+$HADOOP_HOME/bin/hdfs dfs -rm -r /*.ifq /*.bam* /*.vcf*
+
 $SPARK_HOME/bin/spark-submit --master ${MASTER_URL} --num-executors ${NUM_EXECUTORS} \
     --conf spark.yarn.appMasterEnv.CANNOLI_HOME=${CANNOLI_HOME_DIR} \
     --conf spark.yarn.appMasterEnv.ADAM_HOME=${ADAM_HOME_DIR} \

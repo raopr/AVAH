@@ -208,9 +208,9 @@ object GenomeProcessing {
       s"$hdfsPrefix/${sampleID}.bam.adam",
       s"$hdfsPrefix/${sampleID}.vcf",
       "-executable",
-      s"$freeBayesCmd/bin/freebayes",
+      s"$freeBayesCmd",
       "-reference",
-      s"$referenceGenome",
+      s"file:///mydata/$referenceGenome.fa",
       "-add_files",
       "-single").!
 
