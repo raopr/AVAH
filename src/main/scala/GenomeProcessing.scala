@@ -284,7 +284,7 @@ object GenomeProcessing {
         case ("-b" | "--batch") :: value :: tail => nextOption(map ++ Map('batch -> value), tail)
         case ("-n" | "--numnodes") :: value :: tail => nextOption(map ++ Map('numnodes -> value), tail)
         case ("-r" | "--reference") :: value :: tail => nextOption(map ++ Map('reference -> value), tail)
-        case ("-s") :: tail => nextOption(map ++ Map('single -> 1), tail)
+        case ("-s") :: tail => nextOption(map ++ Map('single -> true), tail)
         case value :: tail => println("Unknown option: "+value)
           usage()
           sys.exit(1)
@@ -305,7 +305,7 @@ object GenomeProcessing {
     val commandToExecute = options.getOrElse('command, null)
     val numNodes = options.getOrElse('numnodes, 16).toString.toInt
     val referenceGenome = options.getOrElse('reference, "hs38").toString
-    val singleMode = options('single)
+    val singleMode = options.getOrElse('single, false)
 
     println("Reference genome: ", referenceGenome)
     println("Num. nodes: ", numNodes)
@@ -358,9 +358,9 @@ object GenomeProcessing {
     //val pairList = sampleIDList.map(x => (x, 10)).partitionBy(
     //  new HashPartitioner(numExecutors))
 
-    def splitLine(x: String): (Int, String) = {
+    def splitLine(x: String): (Long, String) = {
       val arr = x.split(" ")
-      return (arr(0).toInt, arr(1))
+      return (arr(0).toLong, arr(1))
     }
 
     val sortedSampleIDList = sampleIDList.map(x => splitLine(x)).repartitionAndSortWithinPartitions(
@@ -369,7 +369,7 @@ object GenomeProcessing {
 
     commandToExecute.toString() match {
       case "D" =>
-        if (singleMode==None) { // parallel
+        if (singleMode==false) { // parallel
           sortedSampleIDList
             .map(s => ConcurrentContext.executeAsync(runInterleave(s._2)))
             .mapPartitions(it => ConcurrentContext.awaitSliding(it, batchSize = max(maxTasks, minBatchSize)))
@@ -388,7 +388,7 @@ object GenomeProcessing {
             .foreach(x => println(s"Finished interleaved FASTQ and de novo assembly of $x"))
         }
       case "E" =>
-        if (singleMode==None) { // parallel
+        if (singleMode==false) { // parallel
           sortedSampleIDList
             .map(s => ConcurrentContext.executeAsync(runInterleave(s._2)))
             .mapPartitions(it => ConcurrentContext.awaitSliding(it, batchSize = max(maxTasks, minBatchSize)))
@@ -412,7 +412,7 @@ object GenomeProcessing {
 //          .mapPartitions(it => ConcurrentContext.awaitSliding(it, batchSize = min(maxTasks, minBatchSize)))
 //          .collect()
 //          .foreach(x => println(s"Finished variant analysis of whole genome sequence $x"))
-        if (singleMode==None) { // parallel
+        if (singleMode==false) { // parallel
           sortedSampleIDList
             .map(s => ConcurrentContext.executeAsync(runInterleave(s._2)))
             .mapPartitions(it => ConcurrentContext.awaitSliding(it, batchSize = min(maxTasks, minBatchSize)))
@@ -439,7 +439,7 @@ object GenomeProcessing {
             .foreach(x => println(s"Finished basic variant analysis of whole genome sequence $x"))
         }
       case "R" =>
-        if (singleMode==None) { // parallel
+        if (singleMode==false) { // parallel
           sortedSampleIDList
             .map(s => ConcurrentContext.executeAsync(runInterleave(s._2)))
             .mapPartitions(it => ConcurrentContext.awaitSliding(it, batchSize = max(maxTasks, minBatchSize)))
