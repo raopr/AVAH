@@ -1,11 +1,11 @@
 # EVA-denovo
 
-## Environment
+# Environment
 Spark 3.0.0, Hadoop 3.2.0, Scala 2.12.8
 
 Hadoop 3+ must use `etc/hadoop/workers` to list the data nodes; always check using `hdfs dfsadmin -report`
 
-## Setup and variant analysis execution using futures
+# Setup and variant analysis execution using futures
 
 1. First create a cluster on CloudLab using `EVA-multi-node-profile`.
 
@@ -24,7 +24,7 @@ $ git clone https://github.com/raopr/EVA-denovo.git
 $ ./EVA-denovo/scripts/run_variant_analysis.sh ./EVA-denovo/misc/sampleIDs-vlarge.txt ./EVA-denovo/misc/sampleURLs-vlarge.txt <num_cluster_nodes> <futures_batch_size>
 ```
 
-Use an integer for `future_batch_size`. If `<= 0`, then we will process one sequence at-a-time like in the EVA/scripts.
+Use an integer for `futures_batch_size`. If `<= 0`, then we will process one sequence at-a-time like in the EVA/scripts.
 
 5. If you want to run variant analysis again but don't want to re-download the sequences, use `NONE` as shown below:
 ```
@@ -32,7 +32,9 @@ $ ./EVA-denovo/scripts/run_variant_analysis.sh ./EVA-denovo/sampleIDs-vlarge.txt
 ```
 
 
-## How to run the JAR
+
+
+## How to run the JAR directly if needed
 
 ```
 $SPARK_HOME/bin/spark-submit --master yarn --deploy-mode cluster --num-executors 3 eva-denovo_2.12-0.1.jar -i hdfs://vm0:9000/sampleIDs.txt -d hdfs://vm0:9000/sampleURLs.txt
@@ -45,6 +47,8 @@ OR
 ```
 $SPARK_HOME/bin/spark-submit --master yarn --deploy-mode client --num-executors 3 --conf spark.yarn.appMasterEnv.CANNOLI_HOME=/mydata/cannoli --conf spark.yarn.appMasterEnv.SPARK_HOME=/mydata/spark --conf spark.executorEnv.CANNOLI_HOME=/mydata/cannoli --conf spark.executorEnv.SPARK_HOME=/mydata/spark eva-denovo_2.12-0.1.jar -i hdfs://vm0:9000/sampleIDs.txt
 ```
+
+# Useful YARN commands
 
 To check YARN jobs:
 
