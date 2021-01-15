@@ -5,13 +5,32 @@ Spark 3.0.0, Hadoop 3.2.0, Scala 2.12.8
 
 Hadoop 3+ must use `etc/hadoop/workers` to list the data nodes; always check using `hdfs dfsadmin -report`
 
-## Setup
+## Setup and variant analysis execution using futures
 
-1. After creating a cluster on CloudLab
+1. First create a cluster on CloudLab using `EVA-multi-node-profile`.
 
-`cd EVA/cluster_config; ./cluster_config <num_nodes> spark3`
+2. Run the following commands on `vm0`.
 
-2. Make sure the `reference sequences` are copied to each node
+```
+$ git clone https://github.com/MU-Data-Science/EVA.git
+$ cd EVA/cluster_config; ./cluster_config <num_nodes> spark3
+```
+
+3. Make sure the reference sequence files (`hs38.*`) are copied to each cluster node on `/mydata`.
+
+4. On `vm0`, do the following:
+```
+$ git clone https://github.com/raopr/EVA-denovo.git
+$ ./EVA-denovo/scripts/run_variant_analysis.sh ./EVA-denovo/misc/sampleIDs-vlarge.txt ./EVA-denovo/misc/sampleURLs-vlarge.txt <num_cluster_nodes> <futures_batch_size>
+```
+
+Use an integer for `future_batch_size`. If `<= 0`, then we will process one sequence at-a-time like in the EVA/scripts.
+
+5. If you want to run variant analysis again but don't want to re-download the sequences, use `NONE` as shown below:
+```
+$ ./EVA-denovo/scripts/run_variant_analysis.sh ./EVA-denovo/sampleIDs-vlarge.txt NONE <num_cluster_nodes> <futures_batch_size>
+```
+
 
 ## How to run the JAR
 

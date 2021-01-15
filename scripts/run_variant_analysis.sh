@@ -24,7 +24,7 @@ if [[ $# -lt 4 ]]; then
     echo "<file2> or NONE - file containing URLs of FASTQ files to download (one per line)"
     echo "                  NONE means don't download any FASTQ files"
     echo "<num_nodes> - number of nodes in the cluster"
-    echo "<batch_size> - batch size for outstanding futures (if 0, run one sequence at-a-time)"
+    echo "<batch_size> - batch size for outstanding futures (if <=0, run one sequence at-a-time)"
     echo ""
     echo "Optional arguments: "
     echo "[reference] - reference genome [default: hs38]"
