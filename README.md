@@ -18,7 +18,7 @@ $ cd EVA/cluster_config; ./cluster_config <num_nodes> spark3
 
 3. Make sure the reference sequence files (`hs38.*`) are copied to each cluster node on `/mydata`.
 
-4. Copy EVA-denovo/misc/sample*-vlarge.txt to /proj/eva-public-PG0. When YARN run the job, it will needs these files on some cluster node.
+4. Copy `EVA-denovo/misc/sample*-vlarge.txt` to `/proj/eva-public-PG0`. When YARN runs the job, it will needs these files on some cluster node.
 
 5. On `vm0`, do the following:
 
