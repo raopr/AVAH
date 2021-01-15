@@ -44,6 +44,17 @@ object ConcurrentContext {
     initIterator.map( futureBatch => Await.result(futureBatch.head, timeout)) ++
       tailIterator.flatMap( lastBatch => Await.result(Future.sequence(lastBatch), timeout))
   }
+
+  // Switch between sliding window vs batch
+  def await[T](it: Iterator[Future[T]], batchSize: Int = 3, timeout: Duration = Inf) = {
+    val ONE = 1
+    if (batchSize.equals(ONE)) {
+      awaitBatch(it, batchSize)
+    }
+    else {
+      awaitSliding(it, batchSize)
+    }
+  }
 }
 
 object GenomeProcessing {
@@ -134,10 +145,6 @@ object GenomeProcessing {
     println(s"Starting BWA on ($x) at $beginTime")
     val sampleID = x.toString
 
-//    ${CANNOLI_SUBMIT} --master ${SPARK_MASTER} --driver-memory ${DRIVER_MEMORY} --num-executors ${NUM_EXECUTORS} --executor-cores ${NUM_CORES} --executor-memory ${EXECUTOR_MEMORY} \
-//      -- bwaMem ${HDFS_PREFIX}/${INPUT_FILE}.ifq ${HDFS_PREFIX}/${INPUT_FILE}.bam \
-//      -executable ${BWA} -sample_id mysample -index ${REFERENCE} -sequence_dictionary ${DICT} -single -add_files
-
     val cannoliSubmit = sys.env("CANNOLI_HOME") + "/exec/cannoli-submit"
     //val sparkMaster = "spark://vm0:7077"
     val hdfsPrefix = "hdfs://vm0:9000"
@@ -171,10 +178,6 @@ object GenomeProcessing {
     println(s"Starting sort/mark duplicates on ($x) at $beginTime")
     val sampleID = x.toString
 
-//    ${ADAM_SUBMIT} --master ${SPARK_MASTER} --driver-memory ${DRIVER_MEMORY} --num-executors ${NUM_EXECUTORS} --executor-cores ${NUM_CORES} --executor-memory ${EXECUTOR_MEMORY} \
-//      -- transformAlignments ${HDFS_PREFIX}/${INPUT_FILE}.bam ${HDFS_PREFIX}/${INPUT_FILE}.bam.adam \
-//      -mark_duplicate_reads -sort_by_reference_position_and_index
-
     val adamSubmit = sys.env("ADAM_HOME") + "/exec/adam-submit"
     //val sparkMaster = "spark://vm0:7077"
     val hdfsPrefix = "hdfs://vm0:9000"
@@ -195,10 +198,6 @@ object GenomeProcessing {
     val beginTime = Calendar.getInstance().getTime()
     println(s"Starting Freebayes on ($x) at $beginTime")
     val sampleID = x.toString
-
-//    ${CANNOLI_SUBMIT} --master ${SPARK_MASTER} --driver-memory ${DRIVER_MEMORY} --num-executors ${NUM_EXECUTORS} --executor-cores ${NUM_CORES} --executor-memory ${EXECUTOR_MEMORY} \
-//      -- freebayes ${HDFS_PREFIX}/${INPUT_FILE}.bam.adam ${HDFS_PREFIX}/${INPUT_FILE}.vcf \
-//      -executable ${FREE_BAYES} -reference ${REFERENCE} -add_files -single
 
     val cannoliSubmit = sys.env("CANNOLI_HOME") + "/exec/cannoli-submit"
     //val sparkMaster = "spark://vm0:7077"
@@ -372,18 +371,18 @@ object GenomeProcessing {
         if (singleMode==false) { // parallel
           sortedSampleIDList
             .map(s => ConcurrentContext.executeAsync(runInterleave(s._2)))
-            .mapPartitions(it => ConcurrentContext.awaitSliding(it, batchSize = max(maxTasks, minBatchSize)))
+            .mapPartitions(it => ConcurrentContext.await(it, batchSize = min(maxTasks, minBatchSize)))
             .map(x => ConcurrentContext.executeAsync(runDenovo(x, kmerVal.toString.toInt)))
-            .mapPartitions(it => ConcurrentContext.awaitSliding(it, batchSize = max(maxTasks, minBatchSize)))
+            .mapPartitions(it => ConcurrentContext.await(it, batchSize = min(maxTasks, minBatchSize)))
             .collect()
             .foreach(x => println(s"Finished interleaved FASTQ and de novo assembly of $x"))
         }
         else {
           sortedSampleIDList.repartition(1)
             .map(s => ConcurrentContext.executeAsync(runInterleave(s._2)))
-            .mapPartitions(it => ConcurrentContext.awaitBatch(it, batchSize = 1))
+            .mapPartitions(it => ConcurrentContext.await(it, batchSize = 1))
             .map(x => ConcurrentContext.executeAsync(runDenovo(x, kmerVal.toString.toInt)))
-            .mapPartitions(it => ConcurrentContext.awaitBatch(it, batchSize = 1))
+            .mapPartitions(it => ConcurrentContext.await(it, batchSize = 1))
             .collect()
             .foreach(x => println(s"Finished interleaved FASTQ and de novo assembly of $x"))
         }
@@ -391,50 +390,45 @@ object GenomeProcessing {
         if (singleMode==false) { // parallel
           sortedSampleIDList
             .map(s => ConcurrentContext.executeAsync(runInterleave(s._2)))
-            .mapPartitions(it => ConcurrentContext.awaitSliding(it, batchSize = max(maxTasks, minBatchSize)))
+            .mapPartitions(it => ConcurrentContext.await(it, batchSize = min(maxTasks, minBatchSize)))
             .map(x => ConcurrentContext.executeAsync(runDenovo(x, kmerVal.toString.toInt)))
-            .mapPartitions(it => ConcurrentContext.awaitSliding(it, batchSize = max(maxTasks, minBatchSize)))
+            .mapPartitions(it => ConcurrentContext.await(it, batchSize = min(maxTasks, minBatchSize)))
             .collect()
             .foreach(x => println(s"Finished interleaved FASTQ and de novo assembly of $x"))
         }
         else {
           sortedSampleIDList.repartition(1)
             .map(s => ConcurrentContext.executeAsync(runInterleave(s._2)))
-            .mapPartitions(it => ConcurrentContext.awaitBatch(it, batchSize = 1))
+            .mapPartitions(it => ConcurrentContext.await(it, batchSize = 1))
             .map(x => ConcurrentContext.executeAsync(runDenovo(x, kmerVal.toString.toInt)))
-            .mapPartitions(it => ConcurrentContext.awaitBatch(it, batchSize = 1))
+            .mapPartitions(it => ConcurrentContext.await(it, batchSize = 1))
             .collect()
             .foreach(x => println(s"Finished interleaved FASTQ and de novo assembly of $x"))
         }
       case "W" =>
-//        sampleIDList
-//          .map(x => ConcurrentContext.executeAsync(runVariantAnalysis(x, referenceGenome, numNodes)))
-//          .mapPartitions(it => ConcurrentContext.awaitSliding(it, batchSize = min(maxTasks, minBatchSize)))
-//          .collect()
-//          .foreach(x => println(s"Finished variant analysis of whole genome sequence $x"))
         if (singleMode==false) { // parallel
           sortedSampleIDList
             .map(s => ConcurrentContext.executeAsync(runInterleave(s._2)))
-            .mapPartitions(it => ConcurrentContext.awaitSliding(it, batchSize = min(maxTasks, minBatchSize)))
+            .mapPartitions(it => ConcurrentContext.await(it, batchSize = min(maxTasks, minBatchSize)))
             .map(x => ConcurrentContext.executeAsync(runBWA(x, referenceGenome)))
-            .mapPartitions(it => ConcurrentContext.awaitSliding(it, batchSize = min(maxTasks, minBatchSize)))
+            .mapPartitions(it => ConcurrentContext.await(it, batchSize = min(maxTasks, minBatchSize)))
             .map(x => ConcurrentContext.executeAsync(runSortMarkDup(x)))
-            .mapPartitions(it => ConcurrentContext.awaitSliding(it, batchSize = min(maxTasks, minBatchSize)))
+            .mapPartitions(it => ConcurrentContext.await(it, batchSize = min(maxTasks, minBatchSize)))
             .map(x => ConcurrentContext.executeAsync(runFreebayes(x, referenceGenome)))
-            .mapPartitions(it => ConcurrentContext.awaitSliding(it, batchSize = min(maxTasks, minBatchSize)))
+            .mapPartitions(it => ConcurrentContext.await(it, batchSize = min(maxTasks, minBatchSize)))
             .collect()
             .foreach(x => println(s"Finished basic variant analysis of whole genome sequence $x"))
         }
         else {
           sortedSampleIDList.repartition(1)
             .map(s => ConcurrentContext.executeAsync(runInterleave(s._2)))
-            .mapPartitions(it => ConcurrentContext.awaitBatch(it, batchSize = 1))
+            .mapPartitions(it => ConcurrentContext.await(it, batchSize = 1))
             .map(x => ConcurrentContext.executeAsync(runBWA(x, referenceGenome)))
-            .mapPartitions(it => ConcurrentContext.awaitBatch(it, batchSize = 1))
+            .mapPartitions(it => ConcurrentContext.await(it, batchSize = 1))
             .map(x => ConcurrentContext.executeAsync(runSortMarkDup(x)))
-            .mapPartitions(it => ConcurrentContext.awaitBatch(it, batchSize = 1))
+            .mapPartitions(it => ConcurrentContext.await(it, batchSize = 1))
             .map(x => ConcurrentContext.executeAsync(runFreebayes(x, referenceGenome)))
-            .mapPartitions(it => ConcurrentContext.awaitBatch(it, batchSize = 1))
+            .mapPartitions(it => ConcurrentContext.await(it, batchSize = 1))
             .collect()
             .foreach(x => println(s"Finished basic variant analysis of whole genome sequence $x"))
         }
@@ -442,50 +436,23 @@ object GenomeProcessing {
         if (singleMode==false) { // parallel
           sortedSampleIDList
             .map(s => ConcurrentContext.executeAsync(runInterleave(s._2)))
-            .mapPartitions(it => ConcurrentContext.awaitSliding(it, batchSize = max(maxTasks, minBatchSize)))
+            .mapPartitions(it => ConcurrentContext.await(it, batchSize = min(maxTasks, minBatchSize)))
             .map(x => ConcurrentContext.executeAsync(runDenovo(x, kmerVal.toString.toInt)))
-            .mapPartitions(it => ConcurrentContext.awaitSliding(it, batchSize = max(maxTasks, minBatchSize)))
+            .mapPartitions(it => ConcurrentContext.await(it, batchSize = min(maxTasks, minBatchSize)))
             .collect()
             .foreach(x => println(s"Finished interleaved FASTQ and de novo assembly of $x"))
         }
         else {
           sortedSampleIDList.repartition(1)
             .map(s => ConcurrentContext.executeAsync(runInterleave(s._2)))
-            .mapPartitions(it => ConcurrentContext.awaitBatch(it, batchSize = 1))
+            .mapPartitions(it => ConcurrentContext.await(it, batchSize = 1))
             .map(x => ConcurrentContext.executeAsync(runDenovo(x, kmerVal.toString.toInt)))
-            .mapPartitions(it => ConcurrentContext.awaitBatch(it, batchSize = 1))
+            .mapPartitions(it => ConcurrentContext.await(it, batchSize = 1))
             .collect()
             .foreach(x => println(s"Finished interleaved FASTQ and de novo assembly of $x"))
         }
       case _ => println("Invalid command"); usage()
     }
-
-//    if (false) {
-//      sampleIDList
-//        .map(x => ConcurrentContext.executeAsync(runInterleave(x)))
-//        //.mapPartitions(it => ConcurrentContext.awaitBatch(it))
-//        .mapPartitions(it => ConcurrentContext.awaitSliding(it, batchSize = max(maxTasks, minBatchSize)))
-//        .collect()
-//        .foreach(x => println(s"Finished interleaved FASTQ generation of $x"))
-//
-//      sampleIDList
-//        .map(x => ConcurrentContext.executeAsync(runDenovo(x, kmerVal.toString.toInt)))
-//        //.mapPartitions(it => ConcurrentContext.awaitBatch(it))
-//        .mapPartitions(it => ConcurrentContext.awaitSliding(it, batchSize = max(maxTasks, minBatchSize)))
-//        .collect()
-//        .foreach(x => println(s"Finished de novo assembly of $x"))
-//    }
-//    else {
-//      sampleIDList
-//        .map(x => ConcurrentContext.executeAsync(runInterleave(x)))
-//        //.mapPartitions(it => ConcurrentContext.awaitBatch(it))
-//        .mapPartitions(it => ConcurrentContext.awaitSliding(it, batchSize = max(maxTasks, minBatchSize)))
-//        .map(x => ConcurrentContext.executeAsync(runDenovo(x, kmerVal.toString.toInt)))
-//        //.mapPartitions(it => ConcurrentContext.awaitBatch(it))
-//        .mapPartitions(it => ConcurrentContext.awaitSliding(it, batchSize = max(maxTasks, minBatchSize)))
-//        .collect()
-//        .foreach(x => println(s"Finished interleaved FASTQ and de novo assembly of $x"))
-//    }
 
     log.info("\uD83D\uDC49 Completed the genome processing successfully.")
     spark.stop()
