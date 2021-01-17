@@ -61,7 +61,7 @@ SPARK_CONF="--conf spark.yarn.appMasterEnv.CANNOLI_HOME=${CANNOLI_HOME_DIR}
         --conf spark.executorEnv.HOMEBREW_PREFIX=${HOMEBREW_DIR}
         --conf spark.executorEnv.EVA_HOME=${EVA_HOME}
         --conf spark.executorEnv.BWA_HOME=${BWA_HOME}
-        --conf spark.executorEnv.FREEBAYES_HOME=${FREEBAYES_HOME}\
+        --conf spark.executorEnv.FREEBAYES_HOME=${FREEBAYES_HOME}
         --conf spark.network.timeout=${TIMEOUT} "
 
 echo ${SPARK_CONF}
