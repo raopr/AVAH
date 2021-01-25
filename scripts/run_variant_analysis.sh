@@ -45,6 +45,9 @@ $HADOOP_HOME/bin/hdfs dfs -rm -r /*.ifq /*.bam* /*.vcf*
 # network timeout for shuffle
 TIMEOUT="420s"
 
+# max attempts
+MAX_ATTEMPTS=3
+
 # Spark conf
 SPARK_CONF="--conf spark.yarn.appMasterEnv.CANNOLI_HOME=${CANNOLI_HOME_DIR}
         --conf spark.yarn.appMasterEnv.ADAM_HOME=${ADAM_HOME_DIR}
@@ -62,7 +65,8 @@ SPARK_CONF="--conf spark.yarn.appMasterEnv.CANNOLI_HOME=${CANNOLI_HOME_DIR}
         --conf spark.executorEnv.EVA_HOME=${EVA_HOME}
         --conf spark.executorEnv.BWA_HOME=${BWA_HOME}
         --conf spark.executorEnv.FREEBAYES_HOME=${FREEBAYES_HOME}
-        --conf spark.network.timeout=${TIMEOUT} "
+        --conf spark.network.timeout=${TIMEOUT}
+        --conf spark.yarn.maxAppAttempts=${MAX_ATTEMPTS} "
 
 echo ${SPARK_CONF}
 
