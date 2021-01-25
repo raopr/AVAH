@@ -18,18 +18,24 @@ $ cd EVA/cluster_config; ./cluster_config <num_nodes> spark3
 
 3. Make sure the reference sequence files (`hs38.*`) are copied to each cluster node on `/mydata`.
 
-4. Copy `EVA-denovo/misc/sample*-vlarge.txt` to `/proj/eva-public-PG0`. When YARN runs the job, it will needs these files on some cluster node.
-
-5. On `vm0`, do the following:
+4. On `vm0`, do the following:
 
 ```
 $ git clone https://github.com/raopr/EVA-denovo.git
+$ cp EVA-denovo/misc/sample*-vlarge.txt /proj/eva-public-PG0/
+```
+
+When YARN runs the job, it will needs these files on all the cluster nodes.
+
+5. Now run the variant analysis.
+
+```
 $ ${HOME}/EVA-denovo/scripts/run_variant_analysis.sh /proj/eva-public-PG0/sampleIDs-vlarge.txt /proj/eva-public-PG0/sampleURLs-vlarge.txt <num_cluster_nodes> <futures_batch_size>
 ```
 
 Use an integer for `futures_batch_size`. If `<= 0`, then we will process one sequence at-a-time like in the EVA/scripts.
 
-5. If you want to run variant analysis again but don't want to re-download the sequences, use `NONE` as shown below:
+6. If you want to run variant analysis again but don't want to re-download the sequences, use `NONE` as shown below:
 ```
 $ ${HOME}/EVA-denovo/scripts/run_variant_analysis.sh /proj/eva-public-PG0/sampleIDs-vlarge.txt NONE <num_cluster_nodes> <futures_batch_size>
 ```

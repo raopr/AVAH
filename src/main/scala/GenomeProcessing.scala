@@ -149,19 +149,26 @@ object GenomeProcessing {
     //val sparkMaster = "spark://vm0:7077"
     val hdfsPrefix = "hdfs://vm0:9000"
     val bwaCmd = sys.env("BWA_HOME") + "/bwa"
-    val retBWA = Seq(s"$cannoliSubmit", "--master", "yarn", "--", "bwaMem",
-      s"$hdfsPrefix/${sampleID}.ifq",
-      s"$hdfsPrefix/${sampleID}.bam",
-      "-executable",
-      s"$bwaCmd",
-      "-sample_id",
-      "mysample",
-      "-index",
-      s"file:///mydata/$referenceGenome.fa",
-      "-sequence_dictionary",
-      s"file:///mydata/$referenceGenome.dict",
-      "-single",
-      "-add_files").!
+
+    var retBWA = 0
+    try {
+      retBWA = Seq(s"$cannoliSubmit", "--master", "yarn", "--", "bwaMem",
+        s"$hdfsPrefix/${sampleID}.ifq",
+        s"$hdfsPrefix/${sampleID}.bam",
+        "-executable",
+        s"$bwaCmd",
+        "-sample_id",
+        "mysample",
+        "-index",
+        s"file:///mydata/$referenceGenome.fa",
+        "-sequence_dictionary",
+        s"file:///mydata/$referenceGenome.dict",
+        "-single",
+        "-add_files").!
+    }
+    catch {
+      case e: Exception => print(s"Exception in BWA, check sequence ID $x")
+    }
 
     // Delete $sampleId.bam_* files
     val hdfsCmd = sys.env("HADOOP_HOME") + "/bin/hdfs"
