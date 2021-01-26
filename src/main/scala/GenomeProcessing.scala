@@ -152,7 +152,11 @@ object GenomeProcessing {
 
     var retBWA = 0
     try {
-      retBWA = Seq(s"$cannoliSubmit", "--master", "yarn", "--", "bwaMem",
+      // Delete $sampleId.bam_* files
+      val hdfsCmd = sys.env("HADOOP_HOME") + "/bin/hdfs"
+      val retDel = Seq(s"$hdfsCmd", "dfs", "-rm", "-r", s"/${sampleID}.bam_*")
+
+      val execBWA = Seq(s"$cannoliSubmit", "--master", "yarn", "--", "bwaMem",
         s"$hdfsPrefix/${sampleID}.ifq",
         s"$hdfsPrefix/${sampleID}.bam",
         "-executable",
@@ -164,17 +168,17 @@ object GenomeProcessing {
         "-sequence_dictionary",
         s"file:///mydata/$referenceGenome.dict",
         "-single",
-        "-add_files").!
+        "-add_files")
+
+      retBWA = (retDel #&& execBWA #|| execBWA).!
+
     }
     catch {
       case e: Exception => print(s"Exception in BWA, check sequence ID $x")
     }
 
-    // Delete $sampleId.bam_* files
-    val hdfsCmd = sys.env("HADOOP_HOME") + "/bin/hdfs"
-    val retDel = Seq(s"$hdfsCmd", "dfs", "-rm", "-r", s"/${sampleID}.bam_*").!
     val endTime = Calendar.getInstance().getTime()
-    println(s"Completed BWA on ($x) ended at $endTime; return values bwa: $retBWA, delete: $retDel")
+    println(s"Completed BWA on ($x) ended at $endTime; return values bwa: $retBWA")
 
     x
   }
