@@ -102,16 +102,22 @@ object GenomeProcessing {
     println(s"Starting Interleave FASTQ on ($x) at $beginTime")
     val sampleID = x.toString
 
-    // Create interleaved fastq files
-    val cannoliSubmit = sys.env("CANNOLI_HOME") + "/exec/cannoli-submit"
-    //val sparkMaster = "spark://vm0:7077"
-    val hdfsPrefix = "hdfs://vm0:9000"
-    val retInterleave = Seq(s"$cannoliSubmit", "--master", "yarn", "--", "interleaveFastq",
-                            s"$hdfsPrefix/${sampleID}_1.fastq.gz",
-                            s"$hdfsPrefix/${sampleID}_2.fastq.gz",
-                            s"$hdfsPrefix/${sampleID}.ifq").!
+    var retInterleave = -1
+    try {
+      // Create interleaved fastq files
+      val cannoliSubmit = sys.env("CANNOLI_HOME") + "/exec/cannoli-submit"
+      //val sparkMaster = "spark://vm0:7077"
+      val hdfsPrefix = "hdfs://vm0:9000"
+      retInterleave = Seq(s"$cannoliSubmit", "--master", "yarn", "--", "interleaveFastq",
+                              s"$hdfsPrefix/${sampleID}_1.fastq.gz",
+                              s"$hdfsPrefix/${sampleID}_2.fastq.gz",
+                              s"$hdfsPrefix/${sampleID}.ifq").!
+    } catch {
+      case e: Exception => print(s"Exception in Interleave FASTQ, check sequence ID $x")
+    }
+
     val endTime = Calendar.getInstance().getTime()
-    println(s"Completed interleave FASTQ on ($x) at ${endTime}, return values: $retInterleave")
+    println(s"Completed Interleave FASTQ on ($x) at ${endTime}, return values: $retInterleave")
     x
   }
 
@@ -149,11 +155,11 @@ object GenomeProcessing {
     //val sparkMaster = "spark://vm0:7077"
     val hdfsPrefix = "hdfs://vm0:9000"
     val bwaCmd = sys.env("BWA_HOME") + "/bwa"
+    val hdfsCmd = sys.env("HADOOP_HOME") + "/bin/hdfs"
 
-    var retBWA = 0
+    var retBWA = -1
     try {
       // Delete $sampleId.bam_* files
-      val hdfsCmd = sys.env("HADOOP_HOME") + "/bin/hdfs"
       val retDel = Seq(s"$hdfsCmd", "dfs", "-rm", "-r", s"/${sampleID}.bam_*")
 
       val execBWA = Seq(s"$cannoliSubmit", "--master", "yarn", "--", "bwaMem",
@@ -192,11 +198,18 @@ object GenomeProcessing {
     val adamSubmit = sys.env("ADAM_HOME") + "/exec/adam-submit"
     //val sparkMaster = "spark://vm0:7077"
     val hdfsPrefix = "hdfs://vm0:9000"
-    val retSortDup = Seq(s"$adamSubmit", "--master", "yarn", "--", "transformAlignments",
-      s"$hdfsPrefix/${sampleID}.bam",
-      s"$hdfsPrefix/${sampleID}.bam.adam",
-      "-mark_duplicate_reads",
-      "-sort_by_reference_position_and_index").!
+
+    var retSortDup = -1
+    try {
+      retSortDup = Seq(s"$adamSubmit", "--master", "yarn", "--", "transformAlignments",
+        s"$hdfsPrefix/${sampleID}.bam",
+        s"$hdfsPrefix/${sampleID}.bam.adam",
+        "-mark_duplicate_reads",
+        "-sort_by_reference_position_and_index").!
+    } catch {
+      case e: Exception => print(s"Exception in sort/mark duplicates, check sequence ID $x")
+    }
+
 
     val endTime = Calendar.getInstance().getTime()
     println(s"Completed sort/mark duplicates on ($x) ended at $endTime; return values $retSortDup")
@@ -214,15 +227,21 @@ object GenomeProcessing {
     //val sparkMaster = "spark://vm0:7077"
     val hdfsPrefix = "hdfs://vm0:9000"
     val freeBayesCmd = sys.env("FREEBAYES_HOME") + "/bin/freebayes"
-    val retFreebayes = Seq(s"$cannoliSubmit", "--master", "yarn", "--", "freebayes",
-      s"$hdfsPrefix/${sampleID}.bam.adam",
-      s"$hdfsPrefix/${sampleID}.vcf",
-      "-executable",
-      s"$freeBayesCmd",
-      "-reference",
-      s"file:///mydata/$referenceGenome.fa",
-      "-add_files",
-      "-single").!
+
+    var retFreebayes = -1
+    try {
+      retFreebayes = Seq(s"$cannoliSubmit", "--master", "yarn", "--", "freebayes",
+        s"$hdfsPrefix/${sampleID}.bam.adam",
+        s"$hdfsPrefix/${sampleID}.vcf",
+        "-executable",
+        s"$freeBayesCmd",
+        "-reference",
+        s"file:///mydata/$referenceGenome.fa",
+        "-add_files",
+        "-single").!
+    } catch {
+      case e: Exception => print(s"Exception in Freebayes, check sequence ID $x")
+    }
 
     val endTime = Calendar.getInstance().getTime()
     println(s"Completed Freebayes on ($x) ended at $endTime; return values $retFreebayes")
