@@ -16,23 +16,24 @@ EVA_HOME=${HOME}"/EVA"
 BWA_HOME="/mydata/bwa"
 FREEBAYES_HOME="/mydata/freebayes"
 
-if [[ $# -lt 4 ]]; then
-    echo "Usage: run_variant_analysis.sh <file1> <file2> <num_nodes> <batch_size> [reference]"
+if [[ $# -lt 5 ]]; then
+    echo "Usage: run_variant_analysis.sh <file1> <file2> <num_nodes> <batch_size> <num_partitions> [reference]"
     echo ""
     echo "Required arguments:"
     echo "<file1> - file containing sample IDs (e.g., SRR077487), one per line"
     echo "<file2> or NONE - file containing URLs of FASTQ files to download (one per line)"
     echo "                  NONE means don't download any FASTQ files"
-    echo "<num_nodes> - number of nodes in the cluster"
+    echo "<num_nodes> - number of cluster nodes"
     echo "<batch_size> - batch size for outstanding futures (if <=0, run one sequence at-a-time)"
+    echo "<num_partitions> - number of partitions (of sequences IDs) to create"
     echo ""
     echo "Optional arguments: "
     echo "[reference] - reference genome [default: hs38]"
     exit
-elif [[ $# -eq 4 ]]; then
+elif [[ $# -eq 5 ]]; then
     REF_GENOME=${DEFAULT_REFERENCE}
 else
-    REF_GENOME=${5}
+    REF_GENOME=${6}
 fi
 
 let NUM_EXECUTORS=${3}-1
@@ -73,11 +74,11 @@ echo ${SPARK_CONF}
 if [[ $4 -gt 0 ]]; then
     $SPARK_HOME/bin/spark-submit --master ${MASTER_URL} --num-executors ${NUM_EXECUTORS} \
         ${SPARK_CONF} \
-        ${EVA_JAR} -i ${LOCAL_PREFIX}/${1} -d ${LOCAL_PREFIX}/${2} -c ${COMMAND} -r ${REF_GENOME} -n ${3} -b ${4} &> ${LOGFILE} &
+        ${EVA_JAR} -i ${LOCAL_PREFIX}/${1} -d ${LOCAL_PREFIX}/${2} -c ${COMMAND} -r ${REF_GENOME} -n ${3} -b ${4} -p ${5} &> ${LOGFILE} &
 else
     $SPARK_HOME/bin/spark-submit --master ${MASTER_URL} --num-executors ${NUM_EXECUTORS} \
         ${SPARK_CONF} \
-        ${EVA_JAR} -i ${LOCAL_PREFIX}/${1} -d ${LOCAL_PREFIX}/${2} -c ${COMMAND} -r ${REF_GENOME} -n ${3} -b ${4} -s &> ${LOGFILE} &
+        ${EVA_JAR} -i ${LOCAL_PREFIX}/${1} -d ${LOCAL_PREFIX}/${2} -c ${COMMAND} -r ${REF_GENOME} -n ${3} -b ${4} -p ${5} -s &> ${LOGFILE} &
 fi
 
 echo "See log file for progress: "${LOGFILE}

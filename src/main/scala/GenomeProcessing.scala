@@ -75,7 +75,8 @@ object GenomeProcessing {
                                   if filename is 'file://NONE', then no FASTQ files are downloaded
       -k | --kmer <INT>           k-mer length [default: 51]
       -b | --batch <INT>          minimum batch size for outstanding futures [default: 3]
-      -n | --numnodes <INT>       size of cluster [default: 16]
+      -p | --partitions <INT>     number of partitions (of sequence IDs) to create [default: 2]
+      -n | --numnodes <INT>       size of cluster [default: 2]
       -r | --reference <name>     reference genome [default: hs38]
       -s                          naive, one sequence at-a-time
     """)
@@ -312,6 +313,7 @@ object GenomeProcessing {
         case ("-k" | "--kmer") :: value :: tail => nextOption(map ++ Map('kmer -> value), tail)
         case ("-b" | "--batch") :: value :: tail => nextOption(map ++ Map('batch -> value), tail)
         case ("-n" | "--numnodes") :: value :: tail => nextOption(map ++ Map('numnodes -> value), tail)
+        case ("-p" | "--partitions") :: value :: tail => nextOption(map ++ Map('numpartitions -> value), tail)
         case ("-r" | "--reference") :: value :: tail => nextOption(map ++ Map('reference -> value), tail)
         case ("-s") :: tail => nextOption(map ++ Map('single -> true), tail)
         case value :: tail => println("Unknown option: "+value)
@@ -332,12 +334,14 @@ object GenomeProcessing {
     val kmerVal = options.getOrElse('kmer, 51)
     val minBatchSize = options.getOrElse('batch, 3).toString.toInt
     val commandToExecute = options.getOrElse('command, null)
-    val numNodes = options.getOrElse('numnodes, 16).toString.toInt
+    val numNodes = options.getOrElse('numnodes, 2).toString.toInt
+    val numPartitions = options.getOrElse('numpartitions, 2).toString.toInt
     val referenceGenome = options.getOrElse('reference, "hs38").toString
     val singleMode = options.getOrElse('single, false)
 
     println("Reference genome: ", referenceGenome)
     println("Num. nodes: ", numNodes)
+    println("Num. partitions: ", numPartitions)
 
     if (commandToExecute == null) {
       println("Option -c | --command is required.")
@@ -374,7 +378,7 @@ object GenomeProcessing {
       println(s"FASTQ files in ${downloadFileName.toString} are assumed to be in HDFS")
     }
 
-    val sampleIDList = spark.sparkContext.textFile(sampleFileName.toString).repartition(numExecutors)
+    val sampleIDList = spark.sparkContext.textFile(sampleFileName.toString).repartition(numPartitions)
     val itemCounts = sampleIDList.glom.map(_.length).collect()
     println("==== No. of sample IDs in each partition ====")
     for (x <- itemCounts) {
@@ -393,7 +397,7 @@ object GenomeProcessing {
     }
 
     val sortedSampleIDList = sampleIDList.map(x => splitLine(x)).repartitionAndSortWithinPartitions(
-      new HashPartitioner(numExecutors))
+      new HashPartitioner(numPartitions))
     //val temp = sizeList.glom.collect()
 
     commandToExecute.toString() match {
