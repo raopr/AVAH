@@ -118,3 +118,7 @@ yarn top
 ```
 yarn node -all -list
 ```
+
+```
+yarn node -showDetails -list
+```
