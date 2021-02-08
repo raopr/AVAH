@@ -244,8 +244,15 @@ object GenomeProcessing {
       case e: Exception => print(s"Exception in Freebayes, check sequence ID $x")
     }
 
+    // Delete all intermediate files as they consume a lot of space
+    val hdfsCmd = sys.env("HADOOP_HOME") + "/bin/hdfs"
+    val retDelifq = Seq(s"$hdfsCmd", "dfs", "-rm", "-r", s"/${sampleID}.ifq").!
+    val retDelbam = Seq(s"$hdfsCmd", "dfs", "-rm", "-r", s"/${sampleID}.bam*").!
+    val retDelvcf = Seq(s"$hdfsCmd", "dfs", "-rm", "-r", s"/${sampleID}.vcf_*").!
+
     val endTime = Calendar.getInstance().getTime()
-    println(s"Completed Freebayes on ($x) ended at $endTime; return values $retFreebayes")
+    println(s"Completed Freebayes on ($x) ended at $endTime; return values $retFreebayes; " +
+      s"delete return values: ${retDelvcf}+${retDelifq}+${retDelbam}")
 
     x
   }
