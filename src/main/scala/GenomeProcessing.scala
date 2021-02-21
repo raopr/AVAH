@@ -16,6 +16,7 @@ import org.apache.log4j.Logger
 import java.util.Calendar
 
 import org.apache.spark.HashPartitioner
+import org.apache.spark.RangePartitioner
 
 // Futures code is taken from http://www.russellspitzer.com/2017/02/27/Concurrency-In-Spark/
 object ConcurrentContext {
@@ -78,6 +79,7 @@ object GenomeProcessing {
       -p | --partitions <INT>     number of partitions (of sequence IDs) to create [default: 2]
       -n | --numnodes <INT>       size of cluster [default: 2]
       -r | --reference <name>     reference genome [default: hs38]
+      -R                          range partitioning [default: hash partitioning]
       -s                          naive, one sequence at-a-time
     """)
   }
@@ -322,6 +324,7 @@ object GenomeProcessing {
         case ("-n" | "--numnodes") :: value :: tail => nextOption(map ++ Map('numnodes -> value), tail)
         case ("-p" | "--partitions") :: value :: tail => nextOption(map ++ Map('numpartitions -> value), tail)
         case ("-r" | "--reference") :: value :: tail => nextOption(map ++ Map('reference -> value), tail)
+        case ("-R") :: tail => nextOption(map ++ Map('rangePartitioner -> true), tail)
         case ("-s") :: tail => nextOption(map ++ Map('single -> true), tail)
         case value :: tail => println("Unknown option: "+value)
           usage()
@@ -345,10 +348,12 @@ object GenomeProcessing {
     val numPartitions = options.getOrElse('numpartitions, 2).toString.toInt
     val referenceGenome = options.getOrElse('reference, "hs38").toString
     val singleMode = options.getOrElse('single, false)
+    val rangePartitioning = options.getOrElse('rangePartitioner, false)
 
     println("Reference genome: ", referenceGenome)
     println("Num. nodes: ", numNodes)
     println("Num. partitions: ", numPartitions)
+    println("Batch size: ", minBatchSize)
 
     if (commandToExecute == null) {
       println("Option -c | --command is required.")
@@ -403,9 +408,24 @@ object GenomeProcessing {
       return (arr(0).toLong, arr(1))
     }
 
-    val sortedSampleIDList = sampleIDList.map(x => splitLine(x)).repartitionAndSortWithinPartitions(
-      new HashPartitioner(numPartitions))
-    //val temp = sizeList.glom.collect()
+    val sizeNameList = sampleIDList.map(x => splitLine(x))
+
+    val sortedSampleIDList = sizeNameList.repartitionAndSortWithinPartitions(
+        rangePartitioning match {
+          case true => new RangePartitioner(numPartitions, sizeNameList)
+          case false => new HashPartitioner(numPartitions)
+        }
+    )
+
+    // Print the partitions
+    println("Partitions:")
+    val output = sortedSampleIDList.glom.collect()
+    for (i <- 0 to output.length-1) {
+      for (j <- 0 to output(i).length-1) {
+        print(output(i)(j))
+      }
+      println("\n")
+    }
 
     commandToExecute.toString() match {
       case "D" =>

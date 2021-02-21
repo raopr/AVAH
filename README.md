@@ -122,3 +122,7 @@ yarn node -all -list
 ```
 yarn node -showDetails -list
 ```
+
+## Monitoring process execution
+
+`dstat --cpu --mem --load --top-cpu --top-mem -dn --output report.csv 2 10`
