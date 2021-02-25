@@ -79,7 +79,7 @@ object GenomeProcessing {
       -p | --partitions <INT>     number of partitions (of sequence IDs) to create [default: 2]
       -n | --numnodes <INT>       size of cluster [default: 2]
       -r | --reference <name>     reference genome [default: hs38]
-      -R                          range partitioning [default: hash partitioning]
+      -P | --partitioner <R|H|D>  [R]ange or [H]ash or [D]efault partitioning [default: D]
       -s                          naive, one sequence at-a-time
     """)
   }
@@ -324,15 +324,15 @@ object GenomeProcessing {
         case ("-n" | "--numnodes") :: value :: tail => nextOption(map ++ Map('numnodes -> value), tail)
         case ("-p" | "--partitions") :: value :: tail => nextOption(map ++ Map('numpartitions -> value), tail)
         case ("-r" | "--reference") :: value :: tail => nextOption(map ++ Map('reference -> value), tail)
-        case ("-R") :: tail => nextOption(map ++ Map('rangePartitioner -> true), tail)
+        case ("-P" | "--partitioner") :: value :: tail => nextOption(map ++ Map('partitioner -> value), tail)
         case ("-s") :: tail => nextOption(map ++ Map('single -> true), tail)
-        case value :: tail => println("Unknown option: "+value)
+        case value :: tail => println("Unknown option: " + value)
           usage()
           sys.exit(1)
       }
     }
 
-    val options = nextOption(Map(),argList)
+    val options = nextOption(Map(), argList)
 
     val spark = SparkSession.builder.appName("Large-scale genome processing").getOrCreate()
     spark.sparkContext.setLogLevel("INFO")
@@ -348,7 +348,7 @@ object GenomeProcessing {
     val numPartitions = options.getOrElse('numpartitions, 2).toString.toInt
     val referenceGenome = options.getOrElse('reference, "hs38").toString
     val singleMode = options.getOrElse('single, false)
-    val rangePartitioning = options.getOrElse('rangePartitioner, false)
+    val partitioner = options.getOrElse('partitioner, "D")
 
     println("Reference genome: ", referenceGenome)
     println("Num. nodes: ", numNodes)
@@ -374,8 +374,8 @@ object GenomeProcessing {
         println(" [", x, "] ")
       }
       println("Min: ", partitionCounts.min, " Max: ", partitionCounts.max, " Avg: ",
-        partitionCounts.sum/partitionCounts.length)
-      val maxDownloadTasks = partitionCounts.sum/partitionCounts.length
+        partitionCounts.sum / partitionCounts.length)
+      val maxDownloadTasks = partitionCounts.sum / partitionCounts.length
 
       // first download files using curl and store in HDFS
       downloadList
@@ -397,8 +397,8 @@ object GenomeProcessing {
       println(" [", x, "] ")
     }
     println("Min: ", itemCounts.min, " Max: ", itemCounts.max, " Avg: ",
-      itemCounts.sum/itemCounts.length)
-    val maxTasks = itemCounts.sum/itemCounts.length
+      itemCounts.sum / itemCounts.length)
+    val maxTasks = itemCounts.sum / itemCounts.length
 
     //val pairList = sampleIDList.map(x => (x, 10)).partitionBy(
     //  new HashPartitioner(numExecutors))
@@ -410,12 +410,14 @@ object GenomeProcessing {
 
     val sizeNameList = sampleIDList.map(x => splitLine(x))
 
-    val sortedSampleIDList = sizeNameList.repartitionAndSortWithinPartitions(
-        rangePartitioning match {
-          case true => new RangePartitioner(numPartitions, sizeNameList)
-          case false => new HashPartitioner(numPartitions)
-        }
-    )
+    val sortedSampleIDList = {
+      partitioner match {
+        case "D" => sizeNameList // default partitioning
+        case "R" => sizeNameList.repartitionAndSortWithinPartitions(new RangePartitioner(numPartitions, sizeNameList))
+        case "H" => sizeNameList.repartitionAndSortWithinPartitions(new HashPartitioner(numPartitions))
+        case _ => println("Unknown option"); sys.exit(1)
+      }
+    }
 
     // Print the partitions
     println("Partitions:")
