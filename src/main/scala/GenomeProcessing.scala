@@ -79,7 +79,7 @@ object GenomeProcessing {
       -p | --partitions <INT>     number of partitions (of sequence IDs) to create [default: 2]
       -n | --numnodes <INT>       size of cluster [default: 2]
       -r | --reference <name>     reference genome [default: hs38]
-      -P | --partitioner <R|H|D>  [R]ange or [H]ash or [D]efault partitioning [default: D]
+      -P | --partitioner <R|H|D|S>  [R]ange or [H]ash or [D]efault or [S]orted default [default: D]
       -s                          naive, one sequence at-a-time
     """)
   }
@@ -413,6 +413,12 @@ object GenomeProcessing {
     val sortedSampleIDList = {
       partitioner match {
         case "D" => sizeNameList // default partitioning
+        case "S" => sizeNameList.mapPartitions( // with sorting
+          iterator => {
+            val myList = iterator.toArray
+            myList.sortWith(_._1 < _._1).iterator
+          }
+        )
         case "R" => sizeNameList.repartitionAndSortWithinPartitions(new RangePartitioner(numPartitions, sizeNameList))
         case "H" => sizeNameList.repartitionAndSortWithinPartitions(new HashPartitioner(numPartitions))
         case _ => println("Unknown option"); sys.exit(1)
