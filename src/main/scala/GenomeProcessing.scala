@@ -354,6 +354,7 @@ object GenomeProcessing {
     println("Num. nodes: ", numNodes)
     println("Num. partitions: ", numPartitions)
     println("Batch size: ", minBatchSize)
+    println("Partitioner: ", partitioner)
 
     if (commandToExecute == null) {
       println("Option -c | --command is required.")
