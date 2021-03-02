@@ -24,7 +24,7 @@ object GenomeTasks {
   }
 
   // Interleave FASTQ
-  def runInterleave[T](x: T):T = {
+  def runInterleave[T](x: T):(T, Int) = {
     val beginTime = Calendar.getInstance().getTime()
     println(s"Starting Interleave FASTQ on ($x) at $beginTime")
     val sampleID = x.toString
@@ -45,7 +45,8 @@ object GenomeTasks {
 
     val endTime = Calendar.getInstance().getTime()
     println(s"Completed Interleave FASTQ on ($x) at ${endTime}, return values: $retInterleave")
-    x
+
+    (x, retInterleave)
   }
 
   // Variant analysis
@@ -73,7 +74,7 @@ object GenomeTasks {
   }
 
   // BWA
-  def runBWA[T](x: T, referenceGenome: String):T = {
+  def runBWA[T](x: T, referenceGenome: String):(T, Int) = {
     val beginTime = Calendar.getInstance().getTime()
     println(s"Starting BWA on ($x) at $beginTime")
     val sampleID = x.toString
@@ -113,11 +114,11 @@ object GenomeTasks {
     val endTime = Calendar.getInstance().getTime()
     println(s"Completed BWA on ($x) ended at $endTime; return values bwa: $retBWA")
 
-    x
+    (x, retBWA)
   }
 
   // Sort and Mark Duplicates
-  def runSortMarkDup[T](x: T):T = {
+  def runSortMarkDup[T](x: T):(T, Int) = {
     val beginTime = Calendar.getInstance().getTime()
     println(s"Starting sort/mark duplicates on ($x) at $beginTime")
     val sampleID = x.toString
@@ -140,11 +141,11 @@ object GenomeTasks {
     val endTime = Calendar.getInstance().getTime()
     println(s"Completed sort/mark duplicates on ($x) ended at $endTime; return values $retSortDup")
 
-    x
+    (x, retSortDup)
   }
 
   // Sort and Mark Duplicates
-  def runFreebayes[T](x: T, referenceGenome: String):T = {
+  def runFreebayes[T](x: T, referenceGenome: String):(T, Int) = {
     val beginTime = Calendar.getInstance().getTime()
     println(s"Starting Freebayes on ($x) at $beginTime")
     val sampleID = x.toString
@@ -179,7 +180,7 @@ object GenomeTasks {
     println(s"Completed Freebayes on ($x) ended at $endTime; return values $retFreebayes; " +
       s"delete return values: ${retDelvcf}+${retDelifq}+${retDelbam}")
 
-    x
+    (x, retFreebayes)
   }
 
 

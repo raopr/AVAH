@@ -183,7 +183,7 @@ object GenomeProcessing {
           sortedSampleIDList
             .map(s => executeAsync(runInterleave(s._2)))
             .mapPartitions(it => await(it, batchSize = min(maxTasks, minBatchSize)))
-            .map(x => executeAsync(runDenovo(x, kmerVal.toString.toInt)))
+            .map(x => executeAsync(runDenovo(x._1, kmerVal.toString.toInt)))
             .mapPartitions(it => await(it, batchSize = min(maxTasks, minBatchSize)))
             .collect()
             .foreach(x => println(s"Finished interleaved FASTQ and de novo assembly of $x"))
@@ -197,36 +197,42 @@ object GenomeProcessing {
             .collect()
             .foreach(x => println(s"Finished interleaved FASTQ and de novo assembly of $x"))
         }
-      case "E" =>
-        if (singleMode==false) { // parallel
-          sortedSampleIDList
-            .map(x => executeAsync(runDenovo(x, kmerVal.toString.toInt)))
-            .mapPartitions(it => await(it, batchSize = min(maxTasks, minBatchSize)))
-            .collect()
-            .foreach(x => println(s"Finished interleaved FASTQ and de novo assembly of $x"))
-        }
-        else {
-          sortedSampleIDList.repartition(1)
-            .map(s => executeAsync(runInterleave(s._2)))
-            .mapPartitions(it => await(it, batchSize = 1))
-            .map(x => executeAsync(runDenovo(x, kmerVal.toString.toInt)))
-            .mapPartitions(it => await(it, batchSize = 1))
-            .collect()
-            .foreach(x => println(s"Finished interleaved FASTQ and de novo assembly of $x"))
-        }
+
       case "W" =>
         if (singleMode==false && forkjoinMode==false) { // parallel
-          sortedSampleIDList
+          val finalRes = sortedSampleIDList
             .map(s => executeAsync(runInterleave(s._2)))
             .mapPartitions(it => await(it, batchSize = min(maxTasks, minBatchSize)))
-            .map(x => executeAsync(runBWA(x, referenceGenome)))
+            .map(x => executeAsync(runBWA(x._1, referenceGenome)))
             .mapPartitions(it => await(it, batchSize = min(maxTasks, minBatchSize)))
-            .map(x => executeAsync(runSortMarkDup(x)))
+            .map(x => executeAsync(runSortMarkDup(x._1)))
             .mapPartitions(it => await(it, batchSize = min(maxTasks, minBatchSize)))
-            .map(x => executeAsync(runFreebayes(x, referenceGenome)))
+            .map(x => executeAsync(runFreebayes(x._1, referenceGenome)))
             .mapPartitions(it => await(it, batchSize = min(maxTasks, minBatchSize)))
             .collect()
-            .foreach(x => println(s"Finished basic variant analysis of whole genome sequence $x"))
+
+          val successfulRes = finalRes.filter(x => x._2 == 0)
+
+          successfulRes.foreach(x => println(s"👉 Finished basic variant analysis of whole genome sequence $x"))
+
+          val failedRes = finalRes.filter(x => x._2 > 0)
+
+          failedRes.foreach(x => println(s"😡 Failed to process whole genome sequence $x"))
+
+          val retryRes = spark.sparkContext.parallelize(failedRes, numPartitions)
+            .map(s => executeAsync(runInterleave(s._2)))
+            .mapPartitions(it => await(it, batchSize = min(maxTasks, minBatchSize)))
+            .map(x => executeAsync(runBWA(x._1, referenceGenome)))
+            .mapPartitions(it => await(it, batchSize = min(maxTasks, minBatchSize)))
+            .map(x => executeAsync(runSortMarkDup(x._1)))
+            .mapPartitions(it => await(it, batchSize = min(maxTasks, minBatchSize)))
+            .map(x => executeAsync(runFreebayes(x._1, referenceGenome)))
+            .mapPartitions(it => await(it, batchSize = min(maxTasks, minBatchSize)))
+            .collect()
+
+          val successfulRetryRes = retryRes.filter(x => x._2 == 0)
+          successfulRetryRes
+            .foreach(x => println(s"👉 RETRY: Finished basic variant analysis of whole genome sequence $x"))
         }
         else if (singleMode==false && forkjoinMode==true) {
           val interleaveRes = sortedSampleIDList
@@ -236,19 +242,19 @@ object GenomeProcessing {
           val joinInterleave = interleaveRes.collect()
 
           val bwaRes = interleaveRes
-            .map(x => executeAsync(runBWA(x, referenceGenome)))
+            .map(x => executeAsync(runBWA(x._1, referenceGenome)))
             .mapPartitions(it => await(it, batchSize = min(maxTasks, minBatchSize)))
 
           val joinBWA = bwaRes.collect()
 
           val sortDupRes = bwaRes
-            .map(x => executeAsync(runSortMarkDup(x)))
+            .map(x => executeAsync(runSortMarkDup(x._1)))
             .mapPartitions(it => await(it, batchSize = min(maxTasks, minBatchSize)))
 
           val joinSortDup = sortDupRes.collect()
 
           val freeBayesRes = sortDupRes
-            .map(x => executeAsync(runFreebayes(x, referenceGenome)))
+            .map(x => executeAsync(runFreebayes(x._1, referenceGenome)))
             .mapPartitions(it => await(it, batchSize = min(maxTasks, minBatchSize)))
 
           val joinFreebayes = freeBayesRes.collect()
@@ -260,34 +266,20 @@ object GenomeProcessing {
           sortedSampleIDList.repartition(1)
             .map(s => executeAsync(runInterleave(s._2)))
             .mapPartitions(it => await(it, batchSize = 1))
-            .map(x => executeAsync(runBWA(x, referenceGenome)))
+            .map(x => executeAsync(runBWA(x._1, referenceGenome)))
             .mapPartitions(it => await(it, batchSize = 1))
-            .map(x => executeAsync(runSortMarkDup(x)))
+            .map(x => executeAsync(runSortMarkDup(x._1)))
             .mapPartitions(it => await(it, batchSize = 1))
-            .map(x => executeAsync(runFreebayes(x, referenceGenome)))
+            .map(x => executeAsync(runFreebayes(x._1, referenceGenome)))
             .mapPartitions(it => await(it, batchSize = 1))
             .collect()
             .foreach(x => println(s"Finished basic variant analysis of whole genome sequence $x"))
         }
-      case "R" =>
-        if (singleMode==false) { // parallel
-          sortedSampleIDList
-            .map(s => executeAsync(runInterleave(s._2)))
-            .mapPartitions(it => await(it, batchSize = min(maxTasks, minBatchSize)))
-            .map(x => executeAsync(runDenovo(x, kmerVal.toString.toInt)))
-            .mapPartitions(it => await(it, batchSize = min(maxTasks, minBatchSize)))
-            .collect()
-            .foreach(x => println(s"Finished interleaved FASTQ and de novo assembly of $x"))
-        }
-        else {
-          sortedSampleIDList.repartition(1)
-            .map(s => executeAsync(runInterleave(s._2)))
-            .mapPartitions(it => await(it, batchSize = 1))
-            .map(x => executeAsync(runDenovo(x, kmerVal.toString.toInt)))
-            .mapPartitions(it => await(it, batchSize = 1))
-            .collect()
-            .foreach(x => println(s"Finished interleaved FASTQ and de novo assembly of $x"))
-        }
+
+      case "R" => println("Option is still under development")
+
+      case "E" => println("Option is still under development")
+
       case _ => println("Invalid command"); usage()
     }
 
