@@ -80,6 +80,7 @@ object GenomeProcessing {
       -n | --numnodes <INT>       size of cluster [default: 2]
       -r | --reference <name>     reference genome [default: hs38]
       -P | --partitioner <R|H|D|S>  [R]ange or [H]ash or [D]efault or [S]orted default [default: D]
+      -f                          use fork-join approach
       -s                          naive, one sequence at-a-time
     """)
   }
@@ -326,6 +327,7 @@ object GenomeProcessing {
         case ("-r" | "--reference") :: value :: tail => nextOption(map ++ Map('reference -> value), tail)
         case ("-P" | "--partitioner") :: value :: tail => nextOption(map ++ Map('partitioner -> value), tail)
         case ("-s") :: tail => nextOption(map ++ Map('single -> true), tail)
+        case ("-f") :: tail => nextOption(map ++ Map('forkjoin -> true), tail)
         case value :: tail => println("Unknown option: " + value)
           usage()
           sys.exit(1)
@@ -348,6 +350,7 @@ object GenomeProcessing {
     val numPartitions = options.getOrElse('numpartitions, 2).toString.toInt
     val referenceGenome = options.getOrElse('reference, "hs38").toString
     val singleMode = options.getOrElse('single, false)
+    val forkjoinMode = options.getOrElse('forkjoin, false)
     val partitioner = options.getOrElse('partitioner, "D")
 
     println("Reference genome: ", referenceGenome)
@@ -355,6 +358,7 @@ object GenomeProcessing {
     println("Num. partitions: ", numPartitions)
     println("Batch size: ", minBatchSize)
     println("Partitioner: ", partitioner)
+    println("Fork-join approach: ", forkjoinMode)
 
     if (commandToExecute == null) {
       println("Option -c | --command is required.")
@@ -459,8 +463,6 @@ object GenomeProcessing {
       case "E" =>
         if (singleMode==false) { // parallel
           sortedSampleIDList
-            .map(s => ConcurrentContext.executeAsync(runInterleave(s._2)))
-            .mapPartitions(it => ConcurrentContext.await(it, batchSize = min(maxTasks, minBatchSize)))
             .map(x => ConcurrentContext.executeAsync(runDenovo(x, kmerVal.toString.toInt)))
             .mapPartitions(it => ConcurrentContext.await(it, batchSize = min(maxTasks, minBatchSize)))
             .collect()
@@ -476,7 +478,7 @@ object GenomeProcessing {
             .foreach(x => println(s"Finished interleaved FASTQ and de novo assembly of $x"))
         }
       case "W" =>
-        if (singleMode==false) { // parallel
+        if (singleMode==false && forkjoinMode==false) { // parallel
           sortedSampleIDList
             .map(s => ConcurrentContext.executeAsync(runInterleave(s._2)))
             .mapPartitions(it => ConcurrentContext.await(it, batchSize = min(maxTasks, minBatchSize)))
@@ -486,6 +488,27 @@ object GenomeProcessing {
             .mapPartitions(it => ConcurrentContext.await(it, batchSize = min(maxTasks, minBatchSize)))
             .map(x => ConcurrentContext.executeAsync(runFreebayes(x, referenceGenome)))
             .mapPartitions(it => ConcurrentContext.await(it, batchSize = min(maxTasks, minBatchSize)))
+            .collect()
+            .foreach(x => println(s"Finished basic variant analysis of whole genome sequence $x"))
+        }
+        else if (singleMode==false && forkjoinMode==true) {
+          val interleaveRes = sortedSampleIDList
+            .map(s => ConcurrentContext.executeAsync(runInterleave(s._2)))
+            .mapPartitions(it => ConcurrentContext.await(it, batchSize = min(maxTasks, minBatchSize)))
+
+          val bwaRes = interleaveRes
+            .map(x => ConcurrentContext.executeAsync(runBWA(x, referenceGenome)))
+            .mapPartitions(it => ConcurrentContext.await(it, batchSize = min(maxTasks, minBatchSize)))
+
+          val sortDupRes = bwaRes
+            .map(x => ConcurrentContext.executeAsync(runSortMarkDup(x)))
+            .mapPartitions(it => ConcurrentContext.await(it, batchSize = min(maxTasks, minBatchSize)))
+
+          val freeBayesRes = sortDupRes
+            .map(x => ConcurrentContext.executeAsync(runFreebayes(x, referenceGenome)))
+            .mapPartitions(it => ConcurrentContext.await(it, batchSize = min(maxTasks, minBatchSize)))
+
+          val variantAnalysisRes = freeBayesRes
             .collect()
             .foreach(x => println(s"Finished basic variant analysis of whole genome sequence $x"))
         }
