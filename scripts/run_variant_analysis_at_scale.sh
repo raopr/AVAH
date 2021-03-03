@@ -67,7 +67,7 @@ if [[ ${BATCH_SIZE} -eq 0 || ${NUM_NODES} -eq 0 || ${NUM_PARTITIONS} -eq 0 ]]; t
     usage
 fi
 
-let NUM_EXECUTORS=${3}-1
+let NUM_EXECUTORS=${NUM_NODES}-1
 
 # Delete *.ifq, *.bam*, *.vcf* files
 $HADOOP_HOME/bin/hdfs dfs -rm -r /*.ifq /*.bam* /*.vcf*
