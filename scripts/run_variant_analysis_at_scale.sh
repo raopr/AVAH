@@ -19,7 +19,8 @@ FREEBAYES_HOME="/mydata/freebayes"
 usage()
 {
   echo "Usage: run_variant_analysis_at_scale [ -h ] [ -i <file1> ] [ -d <file2> ] [ -n <num_nodes> ] "
-  echo "        [ -b <batch_size> ] [ -p <num_partitions> ] [ -r <reference> ] [ -s ] [ -f ] [ -P <type> ] "
+  echo "                                     [ -b <batch_size> ] [ -p <num_partitions> ] [ -r <reference> ] "
+  echo "                                     [ -s ] [ -f ] [ -P <type> ] "
   echo ""
   echo "Required arguments:"
   echo "<file1>         - file containing sample IDs (e.g., SRR077487), one per line"
