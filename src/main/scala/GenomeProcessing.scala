@@ -220,7 +220,7 @@ object GenomeProcessing {
           failedRes.foreach(x => println(s"😡 Failed to process whole genome sequence $x"))
 
           val retryRes = spark.sparkContext.parallelize(failedRes, numPartitions)
-            .map(s => executeAsync(runInterleave(s._2)))
+            .map(x => executeAsync(runInterleave(x._1)))
             .mapPartitions(it => await(it, batchSize = min(maxTasks, minBatchSize)))
             .map(x => executeAsync(runBWA(x._1, referenceGenome)))
             .mapPartitions(it => await(it, batchSize = min(maxTasks, minBatchSize)))
