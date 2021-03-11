@@ -231,7 +231,7 @@ object GenomeProcessing {
             println("\n")
           }
 
-          val retryRes = retrySampleIDList
+          val retryRes = retrySampleIDList.map(x => cleanupFiles(x._1))
             .map(x => executeAsync(runInterleave(x._1)))
             .mapPartitions(it => await(it, batchSize = min(maxTasks, minBatchSize)))
             .map(x => executeAsync(runBWA(x._1, referenceGenome)))

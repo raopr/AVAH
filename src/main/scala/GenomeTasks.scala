@@ -183,6 +183,26 @@ object GenomeTasks {
     (x, retFreebayes)
   }
 
+  // Cleanup temporary files before retrying variant analysis
+  def cleanupFiles[T](x: T):(T, Int) = {
+    val beginTime = Calendar.getInstance().getTime()
+
+    println(s"Starting Cleanup on ($x) at $beginTime")
+
+    val sampleID = x.toString
+    // Delete all intermediate files
+    val hdfsCmd = sys.env("HADOOP_HOME") + "/bin/hdfs"
+    val retDelifq = Seq(s"$hdfsCmd", "dfs", "-rm", "-r", s"/${sampleID}.ifq").!
+    val retDelbam = Seq(s"$hdfsCmd", "dfs", "-rm", "-r", s"/${sampleID}.bam*").!
+    val retDelvcf = Seq(s"$hdfsCmd", "dfs", "-rm", "-r", s"/${sampleID}.vcf*").!
+
+    val finalRes = retDelifq + retDelbam + retDelvcf
+    val endTime = Calendar.getInstance().getTime()
+    println(s"Completed Cleanup on ($x) ended at $endTime; return value $finalRes; " +
+      s"delete return values: ${retDelvcf}+${retDelifq}+${retDelbam}")
+
+    (x, finalRes)
+  }
 
   // Denovo assembly
   def runDenovo[T](x: T, kmerVal: Int):T = {
