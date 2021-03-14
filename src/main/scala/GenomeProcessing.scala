@@ -219,10 +219,18 @@ object GenomeProcessing {
 
           failedRes.foreach(x => println(s"😡 Failed to process whole genome sequence $x"))
 
-          val retrySampleIDList = spark.sparkContext.parallelize(failedRes, numPartitions)
+          var retryBatchSize = minBatchSize
+          var retryNumPartitions = numPartitions
+          if (failedRes.length < numPartitions * minBatchSize) {
+            retryBatchSize = failedRes.length
+            retryNumPartitions = 1
+          }
+
+          val retrySampleIDList = spark.sparkContext.parallelize(failedRes, retryNumPartitions)
 
           // Print the partitions
           println("RETRY partitions:")
+
           val output = retrySampleIDList.glom.collect()
           for (i <- 0 to output.length-1) {
             for (j <- 0 to output(i).length-1) {
@@ -231,15 +239,17 @@ object GenomeProcessing {
             println("\n")
           }
 
-          val retryRes = retrySampleIDList.map(x => cleanupFiles(x._1))
+          val retryRes = retrySampleIDList
+            .map(x => executeAsync(cleanupFiles(x._1)))
+            .mapPartitions(it => await(it, batchSize = retryBatchSize))
             .map(x => executeAsync(runInterleave(x._1)))
-            .mapPartitions(it => await(it, batchSize = min(maxTasks, minBatchSize)))
+            .mapPartitions(it => await(it, batchSize = retryBatchSize))
             .map(x => executeAsync(runBWA(x._1, referenceGenome)))
-            .mapPartitions(it => await(it, batchSize = min(maxTasks, minBatchSize)))
+            .mapPartitions(it => await(it, batchSize = retryBatchSize))
             .map(x => executeAsync(runSortMarkDup(x._1)))
-            .mapPartitions(it => await(it, batchSize = min(maxTasks, minBatchSize)))
+            .mapPartitions(it => await(it, batchSize = retryBatchSize))
             .map(x => executeAsync(runFreebayes(x._1, referenceGenome)))
-            .mapPartitions(it => await(it, batchSize = min(maxTasks, minBatchSize)))
+            .mapPartitions(it => await(it, batchSize = retryBatchSize))
             .collect()
 
           val successfulRetryRes = retryRes.filter(x => x._2 == 0)
