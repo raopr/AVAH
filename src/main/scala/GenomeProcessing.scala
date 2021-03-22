@@ -4,14 +4,19 @@
  */
 
 import org.apache.spark.sql.SparkSession
-import scala.math.{max, min}
 
+import scala.math.{max, min}
 import org.apache.log4j.Logger
 import org.apache.spark.HashPartitioner
 import org.apache.spark.RangePartitioner
 
+import scala.concurrent.{Await, Future}
+import scala.concurrent.duration.Duration
+import sys.process._
+import scala.concurrent.ExecutionContext.Implicits.global
 import GenomeTasks._
 import ConcurrentContext._
+import scala.util.control.Breaks._
 
 object GenomeProcessing {
   def usage(): Unit = {
@@ -177,6 +182,8 @@ object GenomeProcessing {
       println("\n")
     }
 
+    var processingCompleted = false
+
     commandToExecute.toString() match {
       case "D" =>
         if (singleMode==false) { // parallel
@@ -200,6 +207,70 @@ object GenomeProcessing {
 
       case "W" =>
         if (singleMode==false && forkjoinMode==false) { // parallel
+
+          // Future that checks load average and decides to rerun sequences
+          def earlyRetry() : Array[(String, Int)] = {
+            val initialSleepTime = 1000 * 60 * 60 * 12 // 12 hrs in milliseconds
+            Thread.sleep(initialSleepTime)
+
+            var yarnOutput = ""
+            var capacityValue = "100.0%"
+
+            while (true) {
+              try {
+                yarnOutput = Seq("yarn", "queue", "-status", "default").!!
+                val pattern = "Current Capacity : [0-9]+.[0-9]+%".r
+                capacityValue = pattern.findFirstIn(yarnOutput).getOrElse("100.0%").toString.split(' ').last
+              }
+              catch {
+                case e: Exception => print(s"Exception in YARN load check")
+              }
+
+              val loadThreshold = 60.0
+              if (capacityValue.dropRight(1).toFloat < loadThreshold) {
+                print("Load less than threshold")
+                val retryExt = ".retry"
+                var retryFiles = ""
+                try {
+                  retryFiles = Seq("hdfs", "dfs", "-ls", s"/*$retryExt").!!
+                }
+                catch {
+                  case e: Exception => print(s"Exception in HDFS listing of .retry files")
+                }
+
+                val retryPattern = s"/[A-Z]+[0-9]+$retryExt".r
+                val retrySequenceList =
+                  spark.sparkContext.parallelize(retryPattern.findAllIn(retryFiles).toArray
+                    .map(x => x.drop(1).dropRight(retryExt.length())))
+
+                val res = retrySequenceList
+                  .map(x => executeAsync(cleanupFiles(x)))
+                  .mapPartitions(it => await(it, batchSize = minBatchSize))
+                  .map(x => executeAsync(runInterleave(x._1)))
+                  .mapPartitions(it => await(it, batchSize = minBatchSize))
+                  .map(x => executeAsync(runBWA(x._1, referenceGenome)))
+                  .mapPartitions(it => await(it, batchSize = minBatchSize))
+                  .map(x => executeAsync(runSortMarkDup(x._1)))
+                  .mapPartitions(it => await(it, batchSize = minBatchSize))
+                  .map(x => executeAsync(runFreebayes(x._1, referenceGenome)))
+                  .mapPartitions(it => await(it, batchSize = minBatchSize))
+                  .collect()
+
+                return res
+              }
+              else {
+                val sleepTime = 1000 * 10 * 60 // 10 mins in milliseconds
+                Thread.sleep(sleepTime)
+                if (processingCompleted == true)
+                  break
+              }
+            }
+            return Array[(String,Int)]()
+          }
+
+          // Asynchronously execute early retries
+          val earlyRetryFuture = executeAsync(earlyRetry)
+
           val finalRes = sortedSampleIDList
             .map(s => executeAsync(runInterleave(s._2)))
             .mapPartitions(it => await(it, batchSize = min(maxTasks, minBatchSize)))
@@ -219,42 +290,49 @@ object GenomeProcessing {
 
           failedRes.foreach(x => println(s"😡 Failed to process whole genome sequence $x"))
 
-          var retryBatchSize = minBatchSize
-          var retryNumPartitions = numPartitions
-          if (failedRes.length < numPartitions * minBatchSize) {
-            retryBatchSize = failedRes.length
-            retryNumPartitions = 1
-          }
+          // indicate to earlyRetryFuture that the main thread has completed processing
+          processingCompleted = true
 
-          val retrySampleIDList = spark.sparkContext.parallelize(failedRes, retryNumPartitions)
+          // Await for early retry to finish
+          Await.result(earlyRetryFuture, Duration.Inf)
+          earlyRetryFuture.foreach(x => println(s"👉 Early retry completed for whole genome sequence $x"))
 
-          // Print the partitions
-          println("RETRY partitions:")
-
-          val output = retrySampleIDList.glom.collect()
-          for (i <- 0 to output.length-1) {
-            for (j <- 0 to output(i).length-1) {
-              print(output(i)(j))
-            }
-            println("\n")
-          }
-
-          val retryRes = retrySampleIDList
-            .map(x => executeAsync(cleanupFiles(x._1)))
-            .mapPartitions(it => await(it, batchSize = retryBatchSize))
-            .map(x => executeAsync(runInterleave(x._1)))
-            .mapPartitions(it => await(it, batchSize = retryBatchSize))
-            .map(x => executeAsync(runBWA(x._1, referenceGenome)))
-            .mapPartitions(it => await(it, batchSize = retryBatchSize))
-            .map(x => executeAsync(runSortMarkDup(x._1)))
-            .mapPartitions(it => await(it, batchSize = retryBatchSize))
-            .map(x => executeAsync(runFreebayes(x._1, referenceGenome)))
-            .mapPartitions(it => await(it, batchSize = retryBatchSize))
-            .collect()
-
-          val successfulRetryRes = retryRes.filter(x => x._2 == 0)
-          successfulRetryRes
-            .foreach(x => println(s"👉 RETRY: Finished basic variant analysis of whole genome sequence $x"))
+//          var retryBatchSize = minBatchSize
+//          var retryNumPartitions = numPartitions
+//          if (failedRes.length < numPartitions * minBatchSize) {
+//            retryBatchSize = failedRes.length
+//            retryNumPartitions = 1
+//          }
+//
+//          val retrySampleIDList = spark.sparkContext.parallelize(failedRes, retryNumPartitions)
+//
+//          // Print the partitions
+//          println("RETRY partitions:")
+//
+//          val output = retrySampleIDList.glom.collect()
+//          for (i <- 0 to output.length-1) {
+//            for (j <- 0 to output(i).length-1) {
+//              print(output(i)(j))
+//            }
+//            println("\n")
+//          }
+//
+//          val retryRes = retrySampleIDList
+//            .map(x => executeAsync(cleanupFiles(x._1)))
+//            .mapPartitions(it => await(it, batchSize = retryBatchSize))
+//            .map(x => executeAsync(runInterleave(x._1)))
+//            .mapPartitions(it => await(it, batchSize = retryBatchSize))
+//            .map(x => executeAsync(runBWA(x._1, referenceGenome)))
+//            .mapPartitions(it => await(it, batchSize = retryBatchSize))
+//            .map(x => executeAsync(runSortMarkDup(x._1)))
+//            .mapPartitions(it => await(it, batchSize = retryBatchSize))
+//            .map(x => executeAsync(runFreebayes(x._1, referenceGenome)))
+//            .mapPartitions(it => await(it, batchSize = retryBatchSize))
+//            .collect()
+//
+//          val successfulRetryRes = retryRes.filter(x => x._2 == 0)
+//          successfulRetryRes
+//            .foreach(x => println(s"👉 RETRY: Finished basic variant analysis of whole genome sequence $x"))
         }
         else if (singleMode==false && forkjoinMode==true) {
           val interleaveRes = sortedSampleIDList

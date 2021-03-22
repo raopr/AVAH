@@ -176,9 +176,14 @@ object GenomeTasks {
     val retDelbam = Seq(s"$hdfsCmd", "dfs", "-rm", "-r", s"/${sampleID}.bam*").!
     val retDelvcf = Seq(s"$hdfsCmd", "dfs", "-rm", "-r", s"/${sampleID}.vcf_*").!
 
+    // Create a empty .retry file
+    val retryExt = ".retry"
+    val retCreateRetryExt = Seq(s"$hdfsCmd", "dfs", "-touchz", s"/${sampleID}${retryExt}")
+
     val endTime = Calendar.getInstance().getTime()
     println(s"Completed Freebayes on ($x) ended at $endTime; return values $retFreebayes; " +
-      s"delete return values: ${retDelvcf}+${retDelifq}+${retDelbam}")
+      s"delete return values: ${retDelvcf}+${retDelifq}+${retDelbam} " +
+      s"create $retryExt file return value: ${retCreateRetryExt} ")
 
     (x, retFreebayes)
   }
