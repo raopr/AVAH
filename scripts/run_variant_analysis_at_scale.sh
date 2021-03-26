@@ -70,8 +70,8 @@ fi
 
 let NUM_EXECUTORS=${NUM_NODES}-1
 
-# Delete *.ifq, *.bam*, *.vcf* files
-$HADOOP_HOME/bin/hdfs dfs -rm -r /*.ifq /*.bam* /*.vcf*
+# Delete *.ifq, *.bam*, *.vcf* files, *.retry files
+$HADOOP_HOME/bin/hdfs dfs -rm -r /*.ifq /*.bam* /*.vcf* /*.retry
 
 # network timeout for shuffle
 TIMEOUT="420s"

@@ -178,7 +178,9 @@ object GenomeTasks {
 
     // Create a empty .retry file
     val retryExt = ".retry"
-    val retCreateRetryExt = Seq(s"$hdfsCmd", "dfs", "-touchz", s"/${sampleID}${retryExt}").!
+
+    val retCreateRetryExt =
+      if (retFreebayes != 0) {Seq(s"$hdfsCmd", "dfs", "-touchz", s"/${sampleID}${retryExt}").!} else {0}
 
     val endTime = Calendar.getInstance().getTime()
     println(s"Completed Freebayes on ($x) ended at $endTime; return values $retFreebayes; " +
