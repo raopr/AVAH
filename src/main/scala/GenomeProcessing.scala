@@ -233,37 +233,35 @@ object GenomeProcessing {
                 var retryFiles = ""
                 try {
                   retryFiles = Seq("hdfs", "dfs", "-ls", s"/*$retryExt").!!
+                  val retryPattern = s"/[A-Z]+[0-9]+$retryExt".r
+                  val retrySequenceList =
+                    spark.sparkContext.parallelize(retryPattern.findAllIn(retryFiles).toArray
+                      .map(x => x.drop(1).dropRight(retryExt.length())))
+
+                  val res = retrySequenceList
+                    .map(x => executeAsync(cleanupFiles(x)))
+                    .mapPartitions(it => await(it, batchSize = minBatchSize))
+                    .map(x => executeAsync(runInterleave(x._1)))
+                    .mapPartitions(it => await(it, batchSize = minBatchSize))
+                    .map(x => executeAsync(runBWA(x._1, referenceGenome)))
+                    .mapPartitions(it => await(it, batchSize = minBatchSize))
+                    .map(x => executeAsync(runSortMarkDup(x._1)))
+                    .mapPartitions(it => await(it, batchSize = minBatchSize))
+                    .map(x => executeAsync(runFreebayes(x._1, referenceGenome)))
+                    .mapPartitions(it => await(it, batchSize = minBatchSize))
+                    .collect()
+
+                  return res
                 }
                 catch {
                   case e: Exception => print(s"Exception in HDFS listing of .retry files")
                 }
-
-                val retryPattern = s"/[A-Z]+[0-9]+$retryExt".r
-                val retrySequenceList =
-                  spark.sparkContext.parallelize(retryPattern.findAllIn(retryFiles).toArray
-                    .map(x => x.drop(1).dropRight(retryExt.length())))
-
-                val res = retrySequenceList
-                  .map(x => executeAsync(cleanupFiles(x)))
-                  .mapPartitions(it => await(it, batchSize = minBatchSize))
-                  .map(x => executeAsync(runInterleave(x._1)))
-                  .mapPartitions(it => await(it, batchSize = minBatchSize))
-                  .map(x => executeAsync(runBWA(x._1, referenceGenome)))
-                  .mapPartitions(it => await(it, batchSize = minBatchSize))
-                  .map(x => executeAsync(runSortMarkDup(x._1)))
-                  .mapPartitions(it => await(it, batchSize = minBatchSize))
-                  .map(x => executeAsync(runFreebayes(x._1, referenceGenome)))
-                  .mapPartitions(it => await(it, batchSize = minBatchSize))
-                  .collect()
-
-                return res
               }
-              else {
-                val sleepTime = 1000 * 10 * 60 // 10 mins in milliseconds
-                Thread.sleep(sleepTime)
-                if (processingCompleted == true)
-                  break
-              }
+
+              val sleepTime = 1000 * 10 * 60 // 10 mins in milliseconds
+              Thread.sleep(sleepTime)
+              if (processingCompleted == true)
+                break
             }
             return Array[(String,Int)]()
           }
