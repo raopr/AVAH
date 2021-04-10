@@ -115,7 +115,7 @@ fi
 echo ${SPARK_CONF}
 echo ${EXTRA_ARGS}
 
-if [[ ${EXTRA_ARGS} -eq "" ]]; then
+if [[ ${EXTRA_ARGS} == "" ]]; then
     ${SPARK_HOME}/bin/spark-submit --master ${MASTER_URL} --num-executors ${NUM_EXECUTORS} \
             ${SPARK_CONF} \
             ${EVA_JAR} -i ${LOCAL_PREFIX}/${ID_FILE} -d ${LOCAL_PREFIX}/${URL_FILE} -c ${COMMAND} -r ${REF_GENOME} \
