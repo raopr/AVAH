@@ -226,7 +226,7 @@ object GenomeProcessing {
                 case e: Exception => print(s"Exception in YARN load check")
               }
 
-              val loadThreshold = 60.0
+              val loadThreshold = 75.0
               if (capacityValue.dropRight(1).toFloat < loadThreshold) {
                 print("Load less than threshold")
                 val retryExt = ".retry"
@@ -260,10 +260,12 @@ object GenomeProcessing {
 
               val sleepTime = 1000 * 10 * 60 // 10 mins in milliseconds
               Thread.sleep(sleepTime)
-              if (processingCompleted == true)
-                break
+              if (processingCompleted == true) {
+                //break
+                return Array[(String, Int)](("NONE", 1))
+              }
             }
-            return Array[(String,Int)]()
+            return Array[(String,Int)](("NONE", 1))
           }
 
           // Asynchronously execute early retries
@@ -293,6 +295,9 @@ object GenomeProcessing {
 
           // Await for early retry to finish
           Await.result(earlyRetryFuture, Duration.Inf)
+
+          println("Completed earlyRetryFuture")
+
           earlyRetryFuture.foreach(x => println(s"👉 Early retry completed for whole genome sequence $x"))
 
 //          var retryBatchSize = minBatchSize
