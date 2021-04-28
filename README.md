@@ -27,17 +27,17 @@ $ cp EVA-denovo/misc/sample*-vlarge.txt /proj/eva-public-PG0/
 
 When YARN runs the job, it will needs these files on all the cluster nodes.
 
-5. Now run the variant analysis.
+5. Make sure known SNPs and known INDELs folders are on HDFS. Otherwise, use `EVA/scripts/convert_known_snps_indels_to_adam.sh`.
+
+6. Now run the variant analysis.
 
 ```
-$ ${HOME}/EVA-denovo/scripts/run_variant_analysis.sh /proj/eva-public-PG0/sampleIDs-vlarge.txt /proj/eva-public-PG0/sampleURLs-vlarge.txt <num_cluster_nodes> <futures_batch_size>
+$ ${HOME}/EVA-denovo/scripts/run_variant_analysis_at_scale.sh -i /proj/eva-public-PG0/sampleIDs-vlarge.txt -d /proj/eva-public-PG0/sampleURLs-vlarge.txt -n 16 -b 2 -p 15 -P D
 ```
-
-Use an integer for `futures_batch_size`. If `<= 0`, then we will process one sequence at-a-time like in the EVA/scripts.
 
 6. If you want to run variant analysis again but don't want to re-download the sequences, use `NONE` as shown below:
 ```
-$ ${HOME}/EVA-denovo/scripts/run_variant_analysis.sh /proj/eva-public-PG0/sampleIDs-vlarge.txt NONE <num_cluster_nodes> <futures_batch_size>
+$ ${HOME}/EVA-denovo/scripts/run_variant_analysis.sh -i /proj/eva-public-PG0/sampleIDs-vlarge.txt -d /proj/eva-public-PG0/sampleURLs-vlarge.txt -n 16 -b 2 -p 15 -P D
 ```
 
 
