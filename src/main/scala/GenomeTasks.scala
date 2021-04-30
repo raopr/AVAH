@@ -158,7 +158,10 @@ object GenomeTasks {
 
     var retSortDupBQSRIndel = -1
     try {
-      retSortDupBQSRIndel = Seq(s"$adamSubmit", "--master", "yarn", "--", "transformAlignments",
+      retSortDupBQSRIndel = Seq(s"$adamSubmit", "--master", "yarn",
+        "--executor-memory", "40g",
+        "--driver-memory", "40g",
+        "--", "transformAlignments",
         s"$hdfsPrefix/${sampleID}.bam",
         s"$hdfsPrefix/${sampleID}.bam.adam",
         "-recalibrate_base_qualities",
