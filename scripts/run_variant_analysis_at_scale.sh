@@ -20,7 +20,7 @@ usage()
 {
   echo "Usage: run_variant_analysis_at_scale [ -h ] [ -i <file1> ] [ -d <file2> ] [ -n <num_nodes> ] "
   echo "                                     [ -b <batch_size> ] [ -p <num_partitions> ] [ -r <reference> ] "
-  echo "                                     [ -s ] [ -f ] [ -P <type> ] "
+  echo "                                     [ -s ] [ -f ] [ -P <type> ] [ -B ]"
   echo ""
   echo "Required arguments:"
   echo "<file1>         - file containing sample IDs (e.g., SRR077487), one per line"
@@ -35,6 +35,7 @@ usage()
   echo " -s              - naive, process one sequence at-a-time"
   echo " -f              - use fork-join approach"
   echo " -P <R|H|D|S>    - [R]ange or [H]ash or [D]efault or [S]orted default [default: D]"
+  echo " -B              - enable BQSR and INDEL realignment"
   exit 1
 }
 
@@ -47,8 +48,9 @@ URL_FILE=""
 PARTITION_TYPE="D"
 NAIVE=0
 FORK_JOIN=0
+BQSR_INDEL=0
 
-while getopts 'sfhi:d:n:b:p:r:P:' value
+while getopts 'sfhBi:d:n:b:p:r:P:' value
 do
   case $value in
     b) BATCH_SIZE=$OPTARG ;;
@@ -60,6 +62,7 @@ do
     P) PARTITION_TYPE=$OPTARG ;;
     s) NAIVE=1 ;;
     f) FORK_JOIN=1 ;;
+    B) BQSR_INDEL=1 ;;
     h|?) usage ;;
   esac
 done
@@ -110,6 +113,10 @@ fi
 
 if [[ ${FORK_JOIN} -eq 1 ]]; then
     EXTRA_ARGS=${EXTRA_ARGS}" -f"
+fi
+
+if [[ ${BQSR_INDEL} -eq 1 ]]; then
+    EXTRA_ARGS=${EXTRA_ARGS}" -B"
 fi
 
 echo ${SPARK_CONF}

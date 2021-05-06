@@ -159,6 +159,7 @@ object GenomeTasks {
     var retSortDupBQSRIndel = -1
     try {
       retSortDupBQSRIndel = Seq(s"$adamSubmit", "--master", "yarn",
+        "--num-executors", "5",
         "--executor-memory", "40g",
         "--driver-memory", "40g",
         "--", "transformAlignments",
