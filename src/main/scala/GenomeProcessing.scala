@@ -248,11 +248,7 @@ object GenomeProcessing {
                     .mapPartitions(it => await(it, batchSize = minBatchSize))
                     .map(x => executeAsync(runBWA(x._1, referenceGenome)))
                     .mapPartitions(it => await(it, batchSize = minBatchSize))
-                    .map(x => executeAsync(
-                      bqsrIndelMode match {
-                        case true => runSortMarkDupBQSRIndel(x._1)
-                        case false => runSortMarkDup(x._1)
-                    }))
+                    .map(x => executeAsync(runSortMarkDup(x._1, bqsrIndelMode)))
                     .mapPartitions(it => await(it, batchSize = minBatchSize))
                     .map(x => executeAsync(runFreebayes(x._1, referenceGenome)))
                     .mapPartitions(it => await(it, batchSize = minBatchSize))
@@ -283,11 +279,7 @@ object GenomeProcessing {
             .mapPartitions(it => await(it, batchSize = min(maxTasks, minBatchSize)))
             .map(x => executeAsync(runBWA(x._1, referenceGenome)))
             .mapPartitions(it => await(it, batchSize = min(maxTasks, minBatchSize)))
-            .map(x => executeAsync(
-              bqsrIndelMode match {
-                case true => runSortMarkDupBQSRIndel(x._1)
-                case false => runSortMarkDup(x._1)
-            }))
+            .map(x => executeAsync(runSortMarkDup(x._1, bqsrIndelMode)))
             .mapPartitions(it => await(it, batchSize = min(maxTasks, minBatchSize)))
             .map(x => executeAsync(runFreebayes(x._1, referenceGenome)))
             .mapPartitions(it => await(it, batchSize = min(maxTasks, minBatchSize)))
@@ -362,7 +354,7 @@ object GenomeProcessing {
           val joinBWA = bwaRes.collect()
 
           val sortDupRes = bwaRes
-            .map(x => executeAsync(runSortMarkDup(x._1)))
+            .map(x => executeAsync(runSortMarkDup(x._1, bqsrIndelMode)))
             .mapPartitions(it => await(it, batchSize = min(maxTasks, minBatchSize)))
 
           val joinSortDup = sortDupRes.collect()
@@ -382,7 +374,7 @@ object GenomeProcessing {
             .mapPartitions(it => await(it, batchSize = 1))
             .map(x => executeAsync(runBWA(x._1, referenceGenome)))
             .mapPartitions(it => await(it, batchSize = 1))
-            .map(x => executeAsync(runSortMarkDup(x._1)))
+            .map(x => executeAsync(runSortMarkDup(x._1, bqsrIndelMode)))
             .mapPartitions(it => await(it, batchSize = 1))
             .map(x => executeAsync(runFreebayes(x._1, referenceGenome)))
             .mapPartitions(it => await(it, batchSize = 1))

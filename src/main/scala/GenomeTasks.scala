@@ -118,7 +118,7 @@ object GenomeTasks {
   }
 
   // Sort and Mark Duplicates
-  def runSortMarkDup[T](x: T):(T, Int) = {
+  def runSortMarkDup[T](x: T, bqsrIndelMode: Any):(T, Int) = {
     val beginTime = Calendar.getInstance().getTime()
     println(s"Starting sort/mark duplicates on ($x) at $beginTime")
     val sampleID = x.toString
@@ -128,18 +128,44 @@ object GenomeTasks {
     val hdfsPrefix = "hdfs://vm0:9000"
 
     var retSortDup = -1
-    try {
-      retSortDup = Seq(s"$adamSubmit", "--master", "yarn", "--", "transformAlignments",
-        s"$hdfsPrefix/${sampleID}.bam",
-        s"$hdfsPrefix/${sampleID}.bam.adam",
-        "-mark_duplicate_reads",
-        "-sort_by_reference_position_and_index").!
-    } catch {
-      case e: Exception => print(s"Exception in sort/mark duplicates, check sequence ID $x")
+    if (bqsrIndelMode==false) {
+      try {
+        retSortDup = Seq(s"$adamSubmit", "--master", "yarn", "--", "transformAlignments",
+          s"$hdfsPrefix/${sampleID}.bam",
+          s"$hdfsPrefix/${sampleID}.bam.adam",
+          "-mark_duplicate_reads",
+          "-sort_by_reference_position_and_index").!
+      } catch {
+        case e: Exception => print(s"Exception in sort/mark duplicates, check sequence ID $x")
+      }
+    }
+    else  {
+      val known_snps_hdfs = hdfsPrefix + "/known_snps"
+      val known_indels_hdfs = hdfsPrefix + "/known_indels"
+
+      try {
+        retSortDup = Seq(s"$adamSubmit", "--master", "yarn",
+          "--num-executors", "5",
+          "--executor-memory", "40g",
+          "--driver-memory", "40g",
+          "--", "transformAlignments",
+          s"$hdfsPrefix/${sampleID}.bam",
+          s"$hdfsPrefix/${sampleID}.bam.adam",
+          "-recalibrate_base_qualities",
+          "-known_snps",
+          s"$known_snps_hdfs",
+          "-realign_indels",
+          "-known_indels",
+          s"$known_indels_hdfs",
+          "-mark_duplicate_reads",
+          "-sort_by_reference_position_and_index").!
+      } catch {
+        case e: Exception => print(s"Exception in sort/mark duplicates/BQSR/Indel realign, check sequence ID $x")
+      }
     }
 
     val endTime = Calendar.getInstance().getTime()
-    println(s"Completed sort/mark duplicates on ($x) ended at $endTime; return values $retSortDup")
+    println(s"Completed sort/mark duplicates on ($x) ended at $endTime; mode: $bqsrIndelMode return values $retSortDup")
 
     (x, retSortDup)
   }
