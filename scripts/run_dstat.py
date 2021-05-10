@@ -47,12 +47,15 @@ def main():
         plt_attr = sys.argv[3]
 
         for i in range(1, num_hosts):
-            df = pd.read_csv("vm{}{}".format(i, report_name), skiprows=6)
-            #print(df)
-            #x = df['time']
-            x = df.index
-            y = df[plt_attr]
-            plt.plot(x, y, label="vm{}".format(i))
+            try:
+                df = pd.read_csv("vm{}{}".format(i, report_name), skiprows=6)
+                #print(df)
+                #x = df['time']
+                x = df.index
+                y = df[plt_attr]
+                plt.plot(x, y, label="vm{}".format(i))
+            except FileNotFoundError:
+                print("File vm{}{} not found".format(i, report_name))
 
         plt.xlabel("Time")
         plt.ylabel("{}".format(plt_attr))
