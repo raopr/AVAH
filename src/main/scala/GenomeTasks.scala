@@ -88,7 +88,7 @@ object GenomeTasks {
     var retBWA = -1
     try {
       // Delete $sampleId.bam_* files
-      val retDel = Seq(s"$hdfsCmd", "dfs", "-rm", "-r", s"/${sampleID}.bam_*")
+      val retDel = Seq(s"$hdfsCmd", "dfs", "-rm", "-r", "-skipTrash", s"/${sampleID}.bam_*")
 
       val execBWA = Seq(s"$cannoliSubmit", "--master", "yarn", "--", "bwaMem",
         s"$hdfsPrefix/${sampleID}.ifq",
@@ -237,9 +237,9 @@ object GenomeTasks {
 
     // Delete all intermediate files as they consume a lot of space
     val hdfsCmd = sys.env("HADOOP_HOME") + "/bin/hdfs"
-    val retDelifq = Seq(s"$hdfsCmd", "dfs", "-rm", "-r", s"/${sampleID}.ifq").!
-    val retDelbam = Seq(s"$hdfsCmd", "dfs", "-rm", "-r", s"/${sampleID}.bam*").!
-    val retDelvcf = Seq(s"$hdfsCmd", "dfs", "-rm", "-r", s"/${sampleID}.vcf_*").!
+    val retDelifq = Seq(s"$hdfsCmd", "dfs", "-rm", "-r", "-skipTrash", s"/${sampleID}.ifq").!
+    val retDelbam = Seq(s"$hdfsCmd", "dfs", "-rm", "-r", "-skipTrash", s"/${sampleID}.bam*").!
+    val retDelvcf = Seq(s"$hdfsCmd", "dfs", "-rm", "-r", "-skipTrash", s"/${sampleID}.vcf_*").!
 
     // Create a empty .retry file
     val retryExt = ".retry"
@@ -264,9 +264,9 @@ object GenomeTasks {
     val sampleID = x.toString
     // Delete all intermediate files
     val hdfsCmd = sys.env("HADOOP_HOME") + "/bin/hdfs"
-    val retDelifq = Seq(s"$hdfsCmd", "dfs", "-rm", "-r", s"/${sampleID}.ifq").!
-    val retDelbam = Seq(s"$hdfsCmd", "dfs", "-rm", "-r", s"/${sampleID}.bam*").!
-    val retDelvcf = Seq(s"$hdfsCmd", "dfs", "-rm", "-r", s"/${sampleID}.vcf*").!
+    val retDelifq = Seq(s"$hdfsCmd", "dfs", "-rm", "-r", "-skipTrash", s"/${sampleID}.ifq").!
+    val retDelbam = Seq(s"$hdfsCmd", "dfs", "-rm", "-r", "-skipTrash", s"/${sampleID}.bam*").!
+    val retDelvcf = Seq(s"$hdfsCmd", "dfs", "-rm", "-r", "-skipTrash", s"/${sampleID}.vcf*").!
 
     val finalRes = retDelifq + retDelbam + retDelvcf
     val endTime = Calendar.getInstance().getTime()
