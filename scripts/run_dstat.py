@@ -53,13 +53,14 @@ def main():
                 #x = df['time']
                 x = df.index
                 y = df[plt_attr]
+                #plt.fill_between(x, y, label="vm{}".format(i))
                 plt.plot(x, y, label="vm{}".format(i))
             except FileNotFoundError:
                 print("File vm{}{} not found".format(i, report_name))
 
         plt.xlabel("Time")
         plt.ylabel("{}".format(plt_attr))
-        plt.legend()
+        plt.legend(loc='upper center', prop={"size": 8}, handlelength=0.5, bbox_to_anchor=(0.5, 1.15), ncol=15)
         plt.savefig("plot-{}.png".format(plt_attr))
         plt.show()
     else:
@@ -67,7 +68,7 @@ def main():
         usage(sys.argv[0])
 
 def usage(prog_name):
-    print("python3 {} <command> <num_nodes> <attr_name>".format(prog_name))
+    print("python3 {} <command> <num_nodes> [attr_name]".format(prog_name))
     print("")
     print(" Commands:")
     print(" start    - start dstat on all nodes")
