@@ -42,6 +42,7 @@ object GenomeProcessing {
       -P | --partitioner <R|H|D|S>  [R]ange or [H]ash or [D]efault or [S]orted default [default: D]
       -f                          use fork-join approach
       -s                          naive, one sequence at-a-time
+      -e                          early retry of failed sequences
     """)
   }
 
@@ -71,6 +72,7 @@ object GenomeProcessing {
         case ("-s") :: tail => nextOption(map ++ Map('single -> true), tail)
         case ("-f") :: tail => nextOption(map ++ Map('forkjoin -> true), tail)
         case ("-B") :: tail => nextOption(map ++ Map('bqsr_indel -> true), tail)
+        case ("-e") :: tail => nextOption(map ++ Map('early_retry -> true), tail)
         case value :: tail => println("Unknown option: " + value)
           usage()
           sys.exit(1)
@@ -96,6 +98,7 @@ object GenomeProcessing {
     val forkjoinMode = options.getOrElse('forkjoin, false)
     val bqsrIndelMode = options.getOrElse('bqsr_indel, false)
     val partitioner = options.getOrElse('partitioner, "D")
+    val earlyRetryMode = options.getOrElse('early_retry, false)
 
     println("Reference genome: ", referenceGenome)
     println("Num. nodes: ", numNodes)
@@ -104,6 +107,7 @@ object GenomeProcessing {
     println("Partitioner: ", partitioner)
     println("Fork-join approach: ", forkjoinMode)
     println("BQSR INDEL mode: ", bqsrIndelMode)
+    println("Early retry mode: ", earlyRetryMode)
 
     if (commandToExecute == null) {
       println("Option -c | --command is required.")
@@ -212,7 +216,12 @@ object GenomeProcessing {
         if (singleMode==false && forkjoinMode==false) { // parallel
 
           // Future that checks load average and decides to rerun sequences
-          def earlyRetry() : Array[(String, Int)] = {
+          def earlyRetry(): Array[(String, Int)] = {
+            if (earlyRetryMode == false) {
+              // do not perform re-execution
+              return Array[(String, Int)](("NONE", 1))
+            }
+
             val initialSleepTime = 1000 * 60 * 60 * 12 // 12 hrs in milliseconds
             Thread.sleep(initialSleepTime)
 
@@ -268,7 +277,7 @@ object GenomeProcessing {
                 return Array[(String, Int)](("NONE", 1))
               }
             }
-            return Array[(String,Int)](("NONE", 1))
+            return Array[(String, Int)](("NONE", 1))
           }
 
           // Asynchronously execute early retries
@@ -299,46 +308,10 @@ object GenomeProcessing {
           // Await for early retry to finish
           Await.result(earlyRetryFuture, Duration.Inf)
 
-          println("Completed earlyRetryFuture")
-
-          earlyRetryFuture.foreach(x => println(s"👉 Early retry completed for whole genome sequence $x"))
-
-//          var retryBatchSize = minBatchSize
-//          var retryNumPartitions = numPartitions
-//          if (failedRes.length < numPartitions * minBatchSize) {
-//            retryBatchSize = failedRes.length
-//            retryNumPartitions = 1
-//          }
-//
-//          val retrySampleIDList = spark.sparkContext.parallelize(failedRes, retryNumPartitions)
-//
-//          // Print the partitions
-//          println("RETRY partitions:")
-//
-//          val output = retrySampleIDList.glom.collect()
-//          for (i <- 0 to output.length-1) {
-//            for (j <- 0 to output(i).length-1) {
-//              print(output(i)(j))
-//            }
-//            println("\n")
-//          }
-//
-//          val retryRes = retrySampleIDList
-//            .map(x => executeAsync(cleanupFiles(x._1)))
-//            .mapPartitions(it => await(it, batchSize = retryBatchSize))
-//            .map(x => executeAsync(runInterleave(x._1)))
-//            .mapPartitions(it => await(it, batchSize = retryBatchSize))
-//            .map(x => executeAsync(runBWA(x._1, referenceGenome)))
-//            .mapPartitions(it => await(it, batchSize = retryBatchSize))
-//            .map(x => executeAsync(runSortMarkDup(x._1)))
-//            .mapPartitions(it => await(it, batchSize = retryBatchSize))
-//            .map(x => executeAsync(runFreebayes(x._1, referenceGenome)))
-//            .mapPartitions(it => await(it, batchSize = retryBatchSize))
-//            .collect()
-//
-//          val successfulRetryRes = retryRes.filter(x => x._2 == 0)
-//          successfulRetryRes
-//            .foreach(x => println(s"👉 RETRY: Finished basic variant analysis of whole genome sequence $x"))
+          if (earlyRetryMode == true) {
+            println("Completed earlyRetryFuture")
+            earlyRetryFuture.foreach(x => println(s"👉 Early retry completed for whole genome sequence $x"))
+          }
         }
         else if (singleMode==false && forkjoinMode==true) {
           val interleaveRes = sortedSampleIDList

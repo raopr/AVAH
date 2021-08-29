@@ -36,6 +36,7 @@ usage()
   echo " -f              - use fork-join approach"
   echo " -P <R|H|D|S>    - [R]ange or [H]ash or [D]efault or [S]orted default [default: D]"
   echo " -B              - enable BQSR and INDEL realignment"
+  echo " -e              - enable early retry of failed sequences"
   exit 1
 }
 
@@ -49,8 +50,9 @@ PARTITION_TYPE="D"
 NAIVE=0
 FORK_JOIN=0
 BQSR_INDEL=0
+EARLY_RETRY=0
 
-while getopts 'sfhBi:d:n:b:p:r:P:' value
+while getopts 'sfhBei:d:n:b:p:r:P:' value
 do
   case $value in
     b) BATCH_SIZE=$OPTARG ;;
@@ -63,6 +65,7 @@ do
     s) NAIVE=1 ;;
     f) FORK_JOIN=1 ;;
     B) BQSR_INDEL=1 ;;
+    e) EARLY_RETRY=1 ;;
     h|?) usage ;;
   esac
 done
@@ -117,6 +120,10 @@ fi
 
 if [[ ${BQSR_INDEL} -eq 1 ]]; then
     EXTRA_ARGS=${EXTRA_ARGS}" -B"
+fi
+
+if [[ ${EARLY_RETRY} -eq 1 ]]; then
+    EXTRA_ARGS=${EXTRA_ARGS}" -e"
 fi
 
 echo ${SPARK_CONF}
