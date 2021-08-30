@@ -25,7 +25,7 @@ def main():
             run_cmd = "ssh vm{} rm -rf {}".format(i, output_file)
             run_ret = subprocess.call(run_cmd, shell=True)
             print(run_cmd)
-            run_cmd = "ssh vm{} screen -dmS {} dstat -t -l -d -n -m --output {} {}".\
+            run_cmd = "ssh vm{} screen -dmS {} dstat -t -l -d -n -m --noupdate --output {} {}".\
                 format(i, screen_name, output_file, time_interval)
             print(run_cmd)
             run_ret = subprocess.call(run_cmd, shell=True)
