@@ -8,13 +8,16 @@ Hadoop 3+ must use `etc/hadoop/workers` to list the data nodes; always check usi
 # Setup and variant analysis execution using futures
 
 1. First create a cluster on CloudLab using `EVA-multi-node-profile`.
+See instructions [here](https://github.com/MU-Data-Science/EVA/tree/master/cluster_config).
 
 2. Run the following commands on `vm0`.
 
 ```
 $ git clone https://github.com/MU-Data-Science/EVA.git
-$ cd EVA/cluster_config; ./cluster_config <num_nodes> spark3
+$ cd EVA/cluster_config
+$ ./cluster_configure.sh <num_nodes> spark3
 ```
+If the cluster size is large (e.g., 16+ nodes), use the `screen` command first and then run `cluster_configure.sh`.
 
 3. Make sure the reference sequence files (`hs38.*`) are copied to each cluster node on `/mydata`.
 
