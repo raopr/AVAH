@@ -1,4 +1,4 @@
-# EVA-denovo
+# AVAH
 
 # Environment
 Spark 3.0.0, Hadoop 3.2.0, Scala 2.12.8
@@ -24,8 +24,8 @@ If the cluster size is large (e.g., 16+ nodes), use the `screen` command first a
 4. On `vm0`, do the following:
 
 ```
-$ git clone https://github.com/raopr/EVA-denovo.git
-$ cp EVA-denovo/misc/sample*-vlarge.txt /proj/eva-public-PG0/
+$ git clone https://github.com/raopr/AVAH.git
+$ cp AVAH/misc/sample*-vlarge.txt /proj/eva-public-PG0/
 ```
 
 When YARN runs the job, it will needs these files on all the cluster nodes.
@@ -35,12 +35,12 @@ When YARN runs the job, it will needs these files on all the cluster nodes.
 6. Now run the variant analysis.
 
 ```
-$ ${HOME}/EVA-denovo/scripts/run_variant_analysis_at_scale.sh -i /proj/eva-public-PG0/sampleIDs-vlarge.txt -d /proj/eva-public-PG0/sampleURLs-vlarge.txt -n 16 -b 2 -p 15 -P D
+$ ${HOME}/AVAH/scripts/run_variant_analysis_at_scale.sh -i /proj/eva-public-PG0/sampleIDs-vlarge.txt -d /proj/eva-public-PG0/sampleURLs-vlarge.txt -n 16 -b 2 -p 15 -P D
 ```
 
 6. If you want to run variant analysis again but don't want to re-download the sequences, use `NONE` as shown below:
 ```
-$ ${HOME}/EVA-denovo/scripts/run_variant_analysis.sh -i /proj/eva-public-PG0/sampleIDs-vlarge.txt -d /proj/eva-public-PG0/sampleURLs-vlarge.txt -n 16 -b 2 -p 15 -P D
+$ ${HOME}/AVAH/scripts/run_variant_analysis.sh -i /proj/eva-public-PG0/sampleIDs-vlarge.txt -d /proj/eva-public-PG0/sampleURLs-vlarge.txt -n 16 -b 2 -p 15 -P D
 ```
 
 
@@ -49,15 +49,15 @@ $ ${HOME}/EVA-denovo/scripts/run_variant_analysis.sh -i /proj/eva-public-PG0/sam
 ## How to run the JAR directly if needed
 
 ```
-$SPARK_HOME/bin/spark-submit --master yarn --deploy-mode cluster --num-executors 3 eva-denovo_2.12-0.1.jar -i hdfs://vm0:9000/sampleIDs.txt -d hdfs://vm0:9000/sampleURLs.txt
+$SPARK_HOME/bin/spark-submit --master yarn --deploy-mode cluster --num-executors 3 avah_2.12-0.1.jar -i hdfs://vm0:9000/sampleIDs.txt -d hdfs://vm0:9000/sampleURLs.txt
 ```
 OR
 ```
-$SPARK_HOME/bin/spark-submit --master yarn --deploy-mode client --num-executors 3 eva-denovo_2.12-0.1.jar -i hdfs://vm0:9000/sampleIDs.txt -d hdfs://vm0:9000/sampleURLs.txt
+$SPARK_HOME/bin/spark-submit --master yarn --deploy-mode client --num-executors 3 avah_2.12-0.1.jar -i hdfs://vm0:9000/sampleIDs.txt -d hdfs://vm0:9000/sampleURLs.txt
 ```
 OR
 ```
-$SPARK_HOME/bin/spark-submit --master yarn --deploy-mode client --num-executors 3 --conf spark.yarn.appMasterEnv.CANNOLI_HOME=/mydata/cannoli --conf spark.yarn.appMasterEnv.SPARK_HOME=/mydata/spark --conf spark.executorEnv.CANNOLI_HOME=/mydata/cannoli --conf spark.executorEnv.SPARK_HOME=/mydata/spark eva-denovo_2.12-0.1.jar -i hdfs://vm0:9000/sampleIDs.txt
+$SPARK_HOME/bin/spark-submit --master yarn --deploy-mode client --num-executors 3 --conf spark.yarn.appMasterEnv.CANNOLI_HOME=/mydata/cannoli --conf spark.yarn.appMasterEnv.SPARK_HOME=/mydata/spark --conf spark.executorEnv.CANNOLI_HOME=/mydata/cannoli --conf spark.executorEnv.SPARK_HOME=/mydata/spark avah_2.12-0.1.jar -i hdfs://vm0:9000/sampleIDs.txt
 ```
 
 # Useful YARN commands

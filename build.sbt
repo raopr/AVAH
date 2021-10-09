@@ -1,4 +1,4 @@
-name := "EVA-denovo"
+name := "AVAH"
 
 version := "0.1"
 
