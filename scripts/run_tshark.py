@@ -24,7 +24,7 @@ def main():
             run_cmd = "ssh vm{} rm -rf {}".format(i, output_file)
             run_ret = subprocess.call(run_cmd, shell=True)
             print(run_cmd)
-            run_cmd = "ssh vm{} screen -dmS {} sudo tshark -w - | gzip -9 -f {}". \
+            run_cmd = "ssh vm{} screen -dmS {} sudo tshark -w - | gzip -9 -f > {}". \
                 format(i, screen_name, output_file)
             print(run_cmd)
             run_ret = subprocess.call(run_cmd, shell=True)
