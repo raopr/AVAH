@@ -1,13 +1,17 @@
- # AVAH
+# AVAH
 
-# Environment
+## Environment
 Spark 3.0.0, Hadoop 3.2.0, Scala 2.12.8
 
 Hadoop 3+ must use `etc/hadoop/workers` to list the data nodes; check using `hdfs dfsadmin -report`
 
-# Setup and variant analysis execution using futures
+## Setup and execution of variant analysis using AVAH
 
 The instructions are [here](https://github.com/MU-Data-Science/EVA#running-variant-analysis-on-a-cluster-of-cloudlab-nodes-using-avah).
+
+## Rebuilding the JAR if needed
+
+This is a Scala project. You can use `sbt` to `compile` and `package` the project. The JAR file should be copied manually to `lib/` before executing AVAH.
 
 <!--
 1. First create a cluster on CloudLab using `EVA-multi-node-profile`.
@@ -64,7 +68,7 @@ $SPARK_HOME/bin/spark-submit --master yarn --deploy-mode client --num-executors 
 ```
 -->
 
-# Useful YARN commands
+## Useful YARN commands
 
 To check YARN jobs:
 
@@ -135,3 +139,10 @@ yarn node -showDetails -list
 ```
 dstat --cpu --mem --load --top-cpu --top-mem -dn --output report.csv 2 10
 ```
+
+or
+
+```
+dstat --cpu --mem --load --top-cpu --top-mem -dn --noupdate --output report.csv 2 10
+```
+
