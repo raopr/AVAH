@@ -26,7 +26,7 @@ def main():
             print(run_cmd)
             #run_cmd = """ssh vm{} "screen -dmS {} sudo tshark -w - | gzip -9 -f > {}" """. \
             #    format(i, screen_name, output_file)
-            run_cmd = """ssh vm{} "screen -dmS {} sudo tcpdump -G 3600 -w '{}_%Y-%m-%d_%H:%M:%S.pcap' -z gzip}" """. \
+            run_cmd = """ssh vm{} "screen -dmS {} sudo tcpdump -G 3600 -w '{}_%Y-%m-%d_%H:%M:%S.pcap' -z gzip" """. \
                format(i, screen_name, output_file)
             print(run_cmd)
             run_ret = subprocess.call(run_cmd, shell=True)
