@@ -17,7 +17,7 @@ def main():
     output_file = "/mydata/tcpdump-report"
     screen_name = "MYDSTAT"
     time_interval = 900 # 15 mins
-    report_name = "-tshark-report.pcap.gz"
+    target_dir = "/mydata/"
 
     print("Num hosts", num_hosts)
     if (command=="start"):
@@ -27,8 +27,8 @@ def main():
             print(run_cmd)
             #run_cmd = """ssh vm{} "screen -dmS {} sudo tshark -w - | gzip -9 -f > {}" """. \
             #    format(i, screen_name, output_file)
-            run_cmd = """ssh vm{} "screen -dmS {} sudo tcpdump -G {} -w '{}_%Y-%m-%d_%H:%M:%S.pcap' -z gzip" """. \
-               format(i, screen_name, time_interval, output_file)
+            run_cmd = """ssh vm{} "screen -dmS {} sudo tcpdump -G {} -w '{}_%Y-%m-%d_%H:%M:%S_vm{}.pcap' -z gzip" """. \
+               format(i, screen_name, time_interval, output_file, i)
             print(run_cmd)
             run_ret = subprocess.call(run_cmd, shell=True)
     elif (command=="stop"):
@@ -38,7 +38,7 @@ def main():
             run_ret = subprocess.call(run_cmd, shell=True)
     elif (command=="collect"):
         for i in range(1, num_hosts):
-            run_cmd = "scp vm{}{}{} vm{}{}".format(i, ":", output_file, i, report_name)
+            run_cmd = "scp vm{}{}{}_*_vm{}.pcap.gz {}".format(i, ":", output_file, i, target_dir)
             print(run_cmd)
             run_ret = subprocess.call(run_cmd, shell=True)
     else:
