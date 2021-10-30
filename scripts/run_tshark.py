@@ -22,7 +22,7 @@ def main():
     print("Num hosts", num_hosts)
     if (command=="start"):
         for i in range(1, num_hosts):
-            run_cmd = "ssh vm{} rm -rf {}*.pcap".format(i, output_file)
+            run_cmd = "ssh vm{} rm -rf {}*.pcap*".format(i, output_file)
             run_ret = subprocess.call(run_cmd, shell=True)
             print(run_cmd)
             #run_cmd = """ssh vm{} "screen -dmS {} sudo tshark -w - | gzip -9 -f > {}" """. \
