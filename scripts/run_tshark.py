@@ -36,6 +36,11 @@ def main():
             run_cmd = "ssh vm{} screen -S {} -X quit".format(i, screen_name)
             print(run_cmd)
             run_ret = subprocess.call(run_cmd, shell=True)
+    elif (command=="clean"):
+        for i in range(1, num_hosts):
+            run_cmd = "ssh vm{} rm -rf {}*.pcap*".format(i, output_file)
+            print(run_cmd)
+            run_ret = subprocess.call(run_cmd, shell=True)
     elif (command=="collect"):
         for i in range(1, num_hosts):
             run_cmd = "scp vm{}{}{}_*_vm{}.pcap.gz {}".format(i, ":", output_file, i, target_dir)
@@ -52,6 +57,7 @@ def usage(prog_name):
     print(" start    - start tshark on all nodes")
     print(" stop     - stop tshark on all nodes")
     print(" collect  - get the reports from all nodes")
+    print(" clean    - delete the reports from all nodes")
     print("")
     print(" Required:")
     print(" num_nodes - cluster size")
