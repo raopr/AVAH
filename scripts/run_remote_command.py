@@ -30,6 +30,17 @@ def main():
             print("================ vm{} ================".format(i))
             run_cmd = "scp {} vm{}:{}".format(file, i, target_dir)
             run_ret = subprocess.call(run_cmd, shell=True)
+    elif (command == "set_mtu"):
+        interface = sys.argv[3]
+        mtu_value = sys.argv[4]
+        for i in range(0, num_nodes):
+            print("================ vm{} ================".format(i))
+            run_cmd = "ssh {} vm{} sudo ip link set {} mtu {}".format(i, interface, mtu_value)
+            run_ret = subprocess.call(run_cmd, shell=True)
+    else:
+        print("Unsupported command")
+        usage(sys.argv[0])
+        sys.exit(2)
 
 def usage(prog_name):
     print("python3 {} <command> <num_nodes> <arg1> <arg2>".format(prog_name))
@@ -42,6 +53,10 @@ def usage(prog_name):
     print(" grep    - grep log files of all worker nodes")
     print("     <arg1>   - pattern")
     print("     <arg2>   - log directory")
+    print("")
+    print(" set_mtu - set MTU value on all nodes")
+    print("     <arg1>   - interface name")
+    print("     <arg2>   - MTU value (e.g., 9000)")
     print("")
 
 if __name__ == "__main__":
