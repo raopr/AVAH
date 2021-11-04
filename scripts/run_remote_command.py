@@ -35,7 +35,19 @@ def main():
         mtu_value = sys.argv[4]
         for i in range(0, num_nodes):
             print("================ vm{} ================".format(i))
-            run_cmd = "ssh {} vm{} sudo ip link set {} mtu {}".format(i, interface, mtu_value)
+            run_cmd = "ssh vm{} sudo ip link set {} mtu {}".format(i, interface, mtu_value)
+            run_ret = subprocess.call(run_cmd, shell=True)
+    elif (command == "set_tcp_win"):
+        max_win_size = sys.argv[3]
+        default_size = sys.argv[4]
+        for i in range(0, num_nodes):
+            print("================ vm{} ================".format(i))
+            run_cmd = "ssh vm{} sudo sysctl -w " \
+                        "net.core.rmem_max={} net.core.wmem_max={} " \
+                        "net.ipv4.tcp_rmem=\"4096 {} {}\" net.ipv4.tcp_wmem=\"4096 {} {}\" "\
+                        "net.ipv4.route.flush=1" \
+                        .format(i, max_win_size, max_win_size, default_size, max_win_size,
+                                default_size, max_win_size)
             run_ret = subprocess.call(run_cmd, shell=True)
     else:
         print("Unsupported command")
@@ -57,6 +69,10 @@ def usage(prog_name):
     print(" set_mtu - set MTU value on all nodes")
     print("     <arg1>   - interface name")
     print("     <arg2>   - MTU value (e.g., 9000)")
+    print("")
+    print(" set_tcp_win - set TCP window size on all nodes")
+    print("     <arg1>   - max. window size")
+    print("     <arg2>   - default size")
     print("")
 
 if __name__ == "__main__":
