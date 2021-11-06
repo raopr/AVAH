@@ -44,7 +44,7 @@ def main():
             print("================ vm{} ================".format(i))
             run_cmd = "ssh vm{} sudo sysctl -w " \
                         "net.core.rmem_max={} net.core.wmem_max={} " \
-                        "net.ipv4.tcp_rmem=\"4096 {} {}\" net.ipv4.tcp_wmem=\"4096 {} {}\" "\
+                        "net.ipv4.tcp_rmem=\"4096\ {}\ {}\" net.ipv4.tcp_wmem=\"4096\ {}\ {}\" " \
                         "net.ipv4.route.flush=1" \
                         .format(i, max_win_size, max_win_size, default_size, max_win_size,
                                 default_size, max_win_size)
