@@ -14,6 +14,7 @@ EVA_JAR=${HOME}"/AVAH/lib/avah_2.12-0.1.jar"
 DEFAULT_REFERENCE="hs38"
 EVA_HOME=${HOME}"/EVA"
 BWA_HOME="/mydata/bwa"
+BWAMEM2_HOME="/mydata/bwa-mem2"
 FREEBAYES_HOME="/mydata/freebayes"
 
 usage()
@@ -96,6 +97,7 @@ SPARK_CONF="--conf spark.yarn.appMasterEnv.CANNOLI_HOME=${CANNOLI_HOME_DIR}
         --conf spark.yarn.appMasterEnv.HOMEBREW_PREFIX=${HOMEBREW_DIR}
         --conf spark.yarn.appMasterEnv.EVA_HOME=${EVA_HOME}
         --conf spark.yarn.appMasterEnv.BWA_HOME=${BWA_HOME}
+        --conf spark.yarn.appMasterEnv.BWAMEM2_HOME=${BWAMEM2_HOME}
         --conf spark.yarn.appMasterEnv.FREEBAYES_HOME=${FREEBAYES_HOME}
         --conf spark.executorEnv.CANNOLI_HOME=${CANNOLI_HOME_DIR}
         --conf spark.executorEnv.ADAM_HOME=${ADAM_HOME_DIR}
