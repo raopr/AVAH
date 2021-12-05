@@ -40,7 +40,7 @@ object GenomeProcessing {
       -n | --numnodes <INT>       size of cluster [default: 2]
       -r | --reference <name>     reference genome [default: hs38]
       -P | --partitioner <R|H|D|S>  [R]ange or [H]ash or [D]efault or [S]orted default [default: D]
-      -f                          use fork-join approach
+      -f                          use AVAHx (or fork-join approach)
       -s                          naive, one sequence at-a-time
       -e                          early retry of failed sequences
     """)
@@ -105,7 +105,7 @@ object GenomeProcessing {
     println("Num. partitions: ", numPartitions)
     println("Batch size: ", minBatchSize)
     println("Partitioner: ", partitioner)
-    println("Fork-join approach: ", forkjoinMode)
+    println("AVAHx (or fork-join approach): ", forkjoinMode)
     println("BQSR INDEL mode: ", bqsrIndelMode)
     println("Early retry mode: ", earlyRetryMode)
 

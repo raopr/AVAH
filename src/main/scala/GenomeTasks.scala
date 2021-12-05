@@ -117,6 +117,47 @@ object GenomeTasks {
     (x, retBWA)
   }
 
+  // BWAMEM2
+  def runBWAMEM2[T](x: T, referenceGenome: String):(T, Int) = {
+    val beginTime = Calendar.getInstance().getTime()
+    println(s"Starting BWA-MEM2 on ($x) at $beginTime")
+    val sampleID = x.toString
+
+    val cannoliSubmit = sys.env("CANNOLI_HOME") + "/exec/cannoli-submit"
+    //val sparkMaster = "spark://vm0:7077"
+    val hdfsPrefix = "hdfs://vm0:9000"
+    val bwaCmd = sys.env("BWAMEM2_HOME") + "/bwa-mem2"
+    val hdfsCmd = sys.env("HADOOP_HOME") + "/bin/hdfs"
+
+    var retBWA = -1
+    try {
+      // Delete $sampleId.bam_* files
+      val retDel = Seq(s"$hdfsCmd", "dfs", "-rm", "-r", "-skipTrash", s"/${sampleID}.bam_*").!
+
+      val retBWA = Seq(s"$cannoliSubmit", "--master", "yarn", "--", "bwaMem2",
+        s"$hdfsPrefix/${sampleID}.ifq",
+        s"$hdfsPrefix/${sampleID}.bam",
+        "-executable",
+        s"$bwaCmd",
+        "-sample_id",
+        "mysample",
+        "-index",
+        s"file:///mydata/$referenceGenome.fa",
+        "-sequence_dictionary",
+        s"file:///mydata/$referenceGenome.dict",
+        "-single",
+        "-add_files").!
+    }
+    catch {
+      case e: Exception => print(s"Exception in BWA-MEM2, check sequence ID $x")
+    }
+
+    val endTime = Calendar.getInstance().getTime()
+    println(s"Completed BWA-MEM2 on ($x) ended at $endTime; return values bwa: $retBWA")
+
+    (x, retBWA)
+  }
+
   // Sort and Mark Duplicates
   def runSortMarkDup[T](x: T, bqsrIndelMode: Any):(T, Int) = {
     val beginTime = Calendar.getInstance().getTime()
