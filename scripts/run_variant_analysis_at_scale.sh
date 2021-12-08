@@ -34,7 +34,7 @@ usage()
   echo "Optional:"
   echo " -r <reference>  - reference genome [default: hs38]"
   echo " -s              - naive, process one sequence at-a-time"
-  echo " -f              - use fork-join approach"
+  echo " -f              - use AVHAx (or fork-join approach)"
   echo " -P <R|H|D|S>    - [R]ange or [H]ash or [D]efault or [S]orted default [default: D]"
   echo " -B              - enable BQSR and INDEL realignment"
   echo " -e              - enable early retry of failed sequences"
