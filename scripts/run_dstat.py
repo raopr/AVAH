@@ -48,7 +48,7 @@ def main():
 
         for i in range(1, num_hosts):
             try:
-                df = pd.read_csv("vm{}{}".format(i, report_name), skiprows=6)
+                df = pd.read_csv("vm{}{}".format(i, report_name), skiprows=5)
                 #print(df)
                 #x = df['time']
                 x = df.index
