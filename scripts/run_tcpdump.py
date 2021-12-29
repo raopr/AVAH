@@ -16,7 +16,7 @@ def main():
     num_hosts = int(sys.argv[2])
     output_file = "/mydata/tcpdump-report"
     screen_name = "MYDSTAT"
-    time_interval = 900 # 15 mins
+    time_interval = 1800 # 30 mins
     target_dir = "/mydata/"
 
     print("Num hosts", num_hosts)
@@ -54,8 +54,8 @@ def usage(prog_name):
     print("python3 {} <command> <num_nodes> [attr_name]".format(prog_name))
     print("")
     print(" Commands:")
-    print(" start    - start tshark on all nodes")
-    print(" stop     - stop tshark on all nodes")
+    print(" start    - start tcpdump on all nodes")
+    print(" stop     - stop tcpdump on all nodes")
     print(" collect  - get the reports from all nodes")
     print(" clean    - delete the reports from all nodes")
     print("")
