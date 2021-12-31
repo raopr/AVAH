@@ -40,7 +40,7 @@ def main():
             with open('temp.txt', 'w+') as fout:
                 run_ret = subprocess.call(ip_addr_cmd, shell=True, stdout=fout)
                 fout.seek(0)
-                ip_addr = fout.read()
+                ip_addr = fout.read().strip()
 
             print("Host IP address: ", ip_addr)
 
@@ -49,7 +49,7 @@ def main():
             with open('temp.txt', 'w+') as fout:
                 run_ret = subprocess.call(interface_cmd, shell=True, stdout=fout)
                 fout.seek(0)
-                interface_name = fout.read()
+                interface_name = fout.read().strip()
 
             print("Host interface name: ", interface_name)
 
