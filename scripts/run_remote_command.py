@@ -31,12 +31,31 @@ def main():
             run_cmd = "scp {} vm{}:{}".format(file, i, target_dir)
             run_ret = subprocess.call(run_cmd, shell=True)
     elif (command == "set_mtu"):
-        interface = sys.argv[3]
-        mtu_value = sys.argv[4]
+        mtu_value = sys.argv[3]
         for i in range(0, num_nodes):
             print("================ vm{} ================".format(i))
-            run_cmd = "ssh vm{} sudo ip link set {} mtu {}".format(i, interface, mtu_value)
+
+            ip_addr_cmd = ''' ssh vm{} bash -c "'grep 'vm{}-lan' /etc/hosts | cut -f 1'" '''.format(i, i)
+
+            with open('temp.txt', 'w+') as fout:
+                run_ret = subprocess.call(ip_addr_cmd, shell=True, stdout=fout)
+                fout.seek(0)
+                ip_addr = fout.read()
+
+            print("Host IP address: ", ip_addr)
+
+            interface_cmd = ''' ssh vm{} bash -c "'ip r | grep {} | cut -f 3 -d \\" \\" '"  '''.format(i, ip_addr)
+
+            with open('temp.txt', 'w+') as fout:
+                run_ret = subprocess.call(interface_cmd, shell=True, stdout=fout)
+                fout.seek(0)
+                interface_name = fout.read()
+
+            print("Host interface name: ", interface_name)
+
+            run_cmd = "ssh vm{} sudo ip link set {} mtu {}".format(i, interface_name, mtu_value)
             run_ret = subprocess.call(run_cmd, shell=True)
+
     elif (command == "set_tcp_win"):
         max_win_size = sys.argv[3]
         default_size = sys.argv[4]
@@ -68,8 +87,7 @@ def usage(prog_name):
     print("     <arg2>   - log directory")
     print("")
     print(" set_mtu - set MTU value on all nodes")
-    print("     <arg1>   - interface name")
-    print("     <arg2>   - MTU value (e.g., 9000)")
+    print("     <arg1>   - MTU value (e.g., 9000)")
     print("")
     print(" set_tcp_win - set TCP window size on all nodes")
     print("     <arg1>   - max. window size")
