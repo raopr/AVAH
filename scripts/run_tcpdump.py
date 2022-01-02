@@ -25,10 +25,29 @@ def main():
             run_cmd = "ssh vm{} rm -rf {}*.pcap*".format(i, output_file)
             run_ret = subprocess.call(run_cmd, shell=True)
             print(run_cmd)
+
+            ip_addr_cmd = ''' ssh vm{} bash -c "'grep 'vm{}-lan' /etc/hosts | cut -f 1'" '''.format(i, i)
+
+            with open('temp.txt', 'w+') as fout:
+                run_ret = subprocess.call(ip_addr_cmd, shell=True, stdout=fout)
+                fout.seek(0)
+                ip_addr = fout.read().strip()
+
+            print("Host IP address: ", ip_addr)
+
+            interface_cmd = ''' ssh vm{} bash -c "'ip r | grep {} | cut -f 3 -d \\" \\" '"  '''.format(i, ip_addr)
+
+            with open('temp.txt', 'w+') as fout:
+                run_ret = subprocess.call(interface_cmd, shell=True, stdout=fout)
+                fout.seek(0)
+                interface_name = fout.read().strip()
+
+            print("Host interface name: ", interface_name)
+
             #run_cmd = """ssh vm{} "screen -dmS {} sudo tshark -w - | gzip -9 -f > {}" """. \
             #    format(i, screen_name, output_file)
-            run_cmd = """ssh vm{} "screen -dmS {} sudo tcpdump -G {} -w '{}_%Y-%m-%d_%H:%M:%S_vm{}.pcap' -z gzip -s 94" """. \
-               format(i, screen_name, time_interval, output_file, i)
+            run_cmd = """ssh vm{} "screen -dmS {} sudo tcpdump -G {} -i {} -w '{}_%Y-%m-%d_%H:%M:%S_vm{}.pcap' -z gzip -s 94" """. \
+               format(i, screen_name, time_interval, interface_name, output_file, i)
             print(run_cmd)
             run_ret = subprocess.call(run_cmd, shell=True)
     elif (command=="stop"):
