@@ -157,7 +157,6 @@ object GenomeTasks {
     // Delete all intermediate files as they consume a lot of space
     val hdfsCmd = sys.env("HADOOP_HOME") + "/bin/hdfs"
     val retDelbam = Seq(s"$hdfsCmd", "dfs", "-rm", "-r", "-skipTrash", s"/${sampleID}.bam*").!
-    val retDelvcf = Seq(s"$hdfsCmd", "dfs", "-rm", "-r", "-skipTrash", s"/${sampleID}.vcf_*").!
 
     // Create a empty .retry file
     val retryExt = ".retry"
@@ -167,7 +166,7 @@ object GenomeTasks {
 
     val endTime = Calendar.getInstance().getTime()
     println(s"Completed HaplotypeCaller on ($x) ended at $endTime; return values $retHaplotypeCaller; " +
-      s"delete return values: ${retDelvcf}+${retDelbam} " +
+      s"delete return values: ${retDelbam} " +
       s"create $retryExt file return value: ${retCreateRetryExt} ")
 
     (x, retHaplotypeCaller)
