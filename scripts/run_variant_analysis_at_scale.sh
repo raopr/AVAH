@@ -16,12 +16,14 @@ EVA_HOME=${HOME}"/EVA"
 BWA_HOME="/mydata/bwa"
 BWAMEM2_HOME="/mydata/bwa-mem2"
 FREEBAYES_HOME="/mydata/freebayes"
+DATA_DIR="/mydata"
+GATK_HOME="/mydata/gatk-4.1.8.0"
 
 usage()
 {
   echo "Usage: run_variant_analysis_at_scale [ -h ] [ -i <file1> ] [ -d <file2> ] [ -n <num_nodes> ] "
   echo "                                     [ -b <batch_size> ] [ -p <num_partitions> ] [ -r <reference> ] "
-  echo "                                     [ -s ] [ -f ] [ -P <type> ] [ -B ]"
+  echo "                                     [ -s ] [ -f ] [ -P <type> ] [ -B ] [ -e ] [ -G ]"
   echo ""
   echo "Required arguments:"
   echo "<file1>         - file containing sample IDs (e.g., SRR077487), one per line"
@@ -38,6 +40,7 @@ usage()
   echo " -P <R|H|D|S>    - [R]ange or [H]ash or [D]efault or [S]orted default [default: D]"
   echo " -B              - enable BQSR and INDEL realignment"
   echo " -e              - enable early retry of failed sequences"
+  echo " -G              - use GATK pipeline (default: ADAM-Cannoli)"
   exit 1
 }
 
@@ -52,8 +55,9 @@ NAIVE=0
 FORK_JOIN=0
 BQSR_INDEL=0
 EARLY_RETRY=0
+USE_GATK=0
 
-while getopts 'sfhBei:d:n:b:p:r:P:' value
+while getopts 'sfhBeGi:d:n:b:p:r:P:' value
 do
   case $value in
     b) BATCH_SIZE=$OPTARG ;;
@@ -67,6 +71,7 @@ do
     f) FORK_JOIN=1 ;;
     B) BQSR_INDEL=1 ;;
     e) EARLY_RETRY=1 ;;
+    G) USE_GATK=1 ;;
     h|?) usage ;;
   esac
 done
@@ -99,6 +104,8 @@ SPARK_CONF="--conf spark.yarn.appMasterEnv.CANNOLI_HOME=${CANNOLI_HOME_DIR}
         --conf spark.yarn.appMasterEnv.BWA_HOME=${BWA_HOME}
         --conf spark.yarn.appMasterEnv.BWAMEM2_HOME=${BWAMEM2_HOME}
         --conf spark.yarn.appMasterEnv.FREEBAYES_HOME=${FREEBAYES_HOME}
+        --conf spark.yarn.appMasterEnv.DATA_DIR=${DATA_DIR}
+        --conf spark.yarn.appMasterEnv.GATK_HOME=${GATK_HOME}
         --conf spark.executorEnv.CANNOLI_HOME=${CANNOLI_HOME_DIR}
         --conf spark.executorEnv.ADAM_HOME=${ADAM_HOME_DIR}
         --conf spark.executorEnv.SPARK_HOME=${SPARK_HOME_DIR}
@@ -108,6 +115,8 @@ SPARK_CONF="--conf spark.yarn.appMasterEnv.CANNOLI_HOME=${CANNOLI_HOME_DIR}
         --conf spark.executorEnv.BWA_HOME=${BWA_HOME}
         --conf spark.executorEnv.BWAMEM2_HOME=${BWAMEM2_HOME}
         --conf spark.executorEnv.FREEBAYES_HOME=${FREEBAYES_HOME}
+        --conf spark.executorEnv.DATA_DIR=${DATA_DIR}
+        --conf spark.executorEnv.GATK_HOME=${GATK_HOME}
         --conf spark.network.timeout=${TIMEOUT}
         --conf spark.yarn.maxAppAttempts=${MAX_ATTEMPTS} "
 
@@ -127,6 +136,10 @@ fi
 
 if [[ ${EARLY_RETRY} -eq 1 ]]; then
     EXTRA_ARGS=${EXTRA_ARGS}" -e"
+fi
+
+if [[ ${USE_GATK} -eq 1 ]]; then
+    EXTRA_ARGS=${EXTRA_ARGS}" -G"
 fi
 
 echo ${SPARK_CONF}

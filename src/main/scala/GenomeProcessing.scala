@@ -43,6 +43,7 @@ object GenomeProcessing {
       -f                          use AVAHx (or fork-join approach)
       -s                          naive, one sequence at-a-time
       -e                          early retry of failed sequences
+      -G                          Use GATK pipeline (default: ADAM-Cannoli)
     """)
   }
 
@@ -73,6 +74,7 @@ object GenomeProcessing {
         case ("-f") :: tail => nextOption(map ++ Map('forkjoin -> true), tail)
         case ("-B") :: tail => nextOption(map ++ Map('bqsr_indel -> true), tail)
         case ("-e") :: tail => nextOption(map ++ Map('early_retry -> true), tail)
+        case ("-G") :: tail => nextOption(map ++ Map('use_GATK -> true), tail)
         case value :: tail => println("Unknown option: " + value)
           usage()
           sys.exit(1)
@@ -99,6 +101,7 @@ object GenomeProcessing {
     val bqsrIndelMode = options.getOrElse('bqsr_indel, false)
     val partitioner = options.getOrElse('partitioner, "D")
     val earlyRetryMode = options.getOrElse('early_retry, false)
+    val useGATK = options.getOrElse('use_GATK, false)
 
     println("Reference genome: ", referenceGenome)
     println("Num. nodes: ", numNodes)
@@ -108,6 +111,7 @@ object GenomeProcessing {
     println("AVAHx (or fork-join approach): ", forkjoinMode)
     println("BQSR INDEL mode: ", bqsrIndelMode)
     println("Early retry mode: ", earlyRetryMode)
+    println("Use GATK pipeline: ", useGATK)
 
     if (commandToExecute == null) {
       println("Option -c | --command is required.")
@@ -250,18 +254,34 @@ object GenomeProcessing {
                     spark.sparkContext.parallelize(retryPattern.findAllIn(retryFiles).toArray
                       .map(x => x.drop(1).dropRight(retryExt.length())))
 
-                  val res = retrySequenceList
-                    .map(x => executeAsync(cleanupFiles(x)))
-                    .mapPartitions(it => await(it, batchSize = minBatchSize))
-                    .map(x => executeAsync(runInterleave(x._1)))
-                    .mapPartitions(it => await(it, batchSize = minBatchSize))
-                    .map(x => executeAsync(runBWA(x._1, referenceGenome)))
-                    .mapPartitions(it => await(it, batchSize = minBatchSize))
-                    .map(x => executeAsync(runSortMarkDup(x._1, bqsrIndelMode)))
-                    .mapPartitions(it => await(it, batchSize = minBatchSize))
-                    .map(x => executeAsync(runFreebayes(x._1, referenceGenome)))
-                    .mapPartitions(it => await(it, batchSize = minBatchSize))
-                    .collect()
+                  val res = {
+                    useGATK match {
+                      case false => retrySequenceList
+                          .map(x => executeAsync(cleanupFiles(x)))
+                          .mapPartitions(it => await(it, batchSize = minBatchSize))
+                          .map(x => executeAsync(runInterleave(x._1)))
+                          .mapPartitions(it => await(it, batchSize = minBatchSize))
+                          .map(x => executeAsync(runBWA(x._1, referenceGenome)))
+                          .mapPartitions(it => await(it, batchSize = minBatchSize))
+                          .map(x => executeAsync(runSortMarkDup(x._1, bqsrIndelMode)))
+                          .mapPartitions(it => await(it, batchSize = minBatchSize))
+                          .map(x => executeAsync(runFreebayes(x._1, referenceGenome)))
+                          .mapPartitions(it => await(it, batchSize = minBatchSize))
+                          .collect()
+                      case true => retrySequenceList
+                          .map(x => executeAsync(cleanupFiles(x)))
+                          .mapPartitions(it => await(it, batchSize = minBatchSize))
+                          .map(x => executeAsync(runFastqToBam(x._1)))
+                          .mapPartitions(it => await(it, batchSize = minBatchSize))
+                          .map(x => executeAsync(runBWAMarkDuplicates(x._1, referenceGenome)))
+                          .mapPartitions(it => await(it, batchSize = minBatchSize))
+                          .map(x => executeAsync(runSortSam(x._1)))
+                          .mapPartitions(it => await(it, batchSize = minBatchSize))
+                          .map(x => executeAsync(runHaplotypeCaller(x._1, referenceGenome)))
+                          .mapPartitions(it => await(it, batchSize = minBatchSize))
+                          .collect()
+                    }
+                  }
 
                   return res
                 }
@@ -283,17 +303,30 @@ object GenomeProcessing {
           // Asynchronously execute early retries
           val earlyRetryFuture = executeAsync(earlyRetry)
 
-          val finalRes = sortedSampleIDList
-            .map(s => executeAsync(runInterleave(s._2)))
-            .mapPartitions(it => await(it, batchSize = min(maxTasks, minBatchSize)))
-            .map(x => executeAsync(runBWA(x._1, referenceGenome)))
-            .mapPartitions(it => await(it, batchSize = min(maxTasks, minBatchSize)))
-            .map(x => executeAsync(runSortMarkDup(x._1, bqsrIndelMode)))
-            .mapPartitions(it => await(it, batchSize = min(maxTasks, minBatchSize)))
-            .map(x => executeAsync(runFreebayes(x._1, referenceGenome)))
-            .mapPartitions(it => await(it, batchSize = min(maxTasks, minBatchSize)))
-            .collect()
-
+          val finalRes = {
+            useGATK match {
+              case false => sortedSampleIDList
+                  .map(s => executeAsync(runInterleave(s._2)))
+                  .mapPartitions(it => await(it, batchSize = min(maxTasks, minBatchSize)))
+                  .map(x => executeAsync(runBWA(x._1, referenceGenome)))
+                  .mapPartitions(it => await(it, batchSize = min(maxTasks, minBatchSize)))
+                  .map(x => executeAsync(runSortMarkDup (x._1, bqsrIndelMode)))
+                  .mapPartitions(it => await(it, batchSize = min (maxTasks, minBatchSize)))
+                  .map(x => executeAsync(runFreebayes(x._1, referenceGenome)))
+                  .mapPartitions(it => await(it, batchSize = min (maxTasks, minBatchSize)))
+                  .collect()
+              case true => sortedSampleIDList
+                  .map(s => executeAsync(runFastqToBam(s._2)))
+                  .mapPartitions(it => await(it, batchSize = min(maxTasks, minBatchSize)))
+                  .map(x => executeAsync(runBWAMarkDuplicates(x._1, referenceGenome)))
+                  .mapPartitions(it => await(it, batchSize = min(maxTasks, minBatchSize)))
+                  .map(x => executeAsync(runSortSam(x._1)))
+                  .mapPartitions(it => await(it, batchSize = min(maxTasks, minBatchSize)))
+                  .map(x => executeAsync(runHaplotypeCaller(x._1, referenceGenome)))
+                  .mapPartitions(it => await(it, batchSize = min(maxTasks, minBatchSize)))
+                  .collect()
+            }
+          }
           val successfulRes = finalRes.filter(x => x._2 == 0)
 
           successfulRes.foreach(x => println(s"👉 Finished basic variant analysis of whole genome sequence $x"))

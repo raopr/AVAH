@@ -13,6 +13,8 @@ The instructions are [here](https://github.com/MU-Data-Science/EVA#running-varia
 
 This is a Scala project. You can use `sbt` to `compile` and `package` the project. The JAR file should be copied manually to `lib/` before executing AVAH.
 
+If you wish to change the `scalaVersion` in build.sbt, run `reload` before rebuilding the JAR.
+
 <!--
 1. First create a cluster on CloudLab using `EVA-multi-node-profile`.
 See instructions [here](https://github.com/MU-Data-Science/EVA/tree/master/cluster_config).
