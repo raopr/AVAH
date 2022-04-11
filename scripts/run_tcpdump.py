@@ -55,6 +55,12 @@ def main():
             run_cmd = "ssh vm{} screen -S {} -X quit".format(i, screen_name)
             print(run_cmd)
             run_ret = subprocess.call(run_cmd, shell=True)
+    elif (command=="merge"):
+        for i in range(1, num_hosts):
+            run_cmd = ''' ssh vm{} bash -c "mergecap -w {}/tcpdump-report-merged_vm{}.pcap.gz {}/tcpdump-report*.pcap.gz" '''\
+                .format(i, target_dir, i, target_dir)
+            print(run_cmd)
+            run_ret = subprocess.call(run_cmd, shell=True)
     elif (command=="clean"):
         for i in range(1, num_hosts):
             run_cmd = "ssh vm{} rm -rf {}*.pcap*".format(i, output_file)
@@ -62,7 +68,7 @@ def main():
             run_ret = subprocess.call(run_cmd, shell=True)
     elif (command=="collect"):
         for i in range(1, num_hosts):
-            run_cmd = "scp vm{}{}{}_*_vm{}.pcap.gz {}".format(i, ":", output_file, i, target_dir)
+            run_cmd = "scp vm{}{}{}*merged_vm{}.pcap.gz {}".format(i, ":", output_file, i, target_dir)
             print(run_cmd)
             run_ret = subprocess.call(run_cmd, shell=True)
     else:
@@ -75,6 +81,7 @@ def usage(prog_name):
     print(" Commands:")
     print(" start    - start tcpdump on all nodes")
     print(" stop     - stop tcpdump on all nodes")
+    print(" merge    - merge the reports on each node")
     print(" collect  - get the reports from all nodes")
     print(" clean    - delete the reports from all nodes")
     print("")
