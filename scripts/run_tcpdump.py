@@ -15,7 +15,7 @@ def main():
     command = sys.argv[1]
     num_hosts = int(sys.argv[2])
     output_file = "/mydata/tcpdump-report"
-    screen_name = "MYDSTAT"
+    screen_name = "MYTCPDUMP"
     time_interval = 1800 # 30 mins
     target_dir = "/mydata/"
 
