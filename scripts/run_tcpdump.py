@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 #
 import sys
+import os
 import getopt
 import subprocess
 import time
@@ -15,6 +16,7 @@ def main():
     command = sys.argv[1]
     num_hosts = int(sys.argv[2])
     output_file = "/mydata/tcpdump-report"
+    analysis_files = "/mydata/vm*.txt"
     screen_name = "MYTCPDUMP"
     time_interval = 1800 # 30 mins
     target_dir = "/mydata/"
@@ -61,6 +63,28 @@ def main():
                 .format(i, target_dir, i, target_dir, i)
             print(run_cmd)
             run_ret = subprocess.call(run_cmd, shell=True)
+    elif (command=="analyze"):
+        p_list = []
+        for i in range(1, num_hosts):
+            MYHOME=os.getenv('HOME')
+            run_cmd = ''' scp {}/AVAH/scripts/process_network_traces.sh vm{}{}{}/ '''.format(MYHOME, i, ":", MYHOME)
+            print(run_cmd)
+            run_ret = subprocess.call(run_cmd, shell=True)
+            run_cmd = ''' ssh vm{} {}/process_network_traces.sh vm{} '''.format(i, MYHOME, i)
+            print(run_cmd)
+            p_ret = subprocess.Popen(run_cmd, shell=True)
+            p_list.append(p_ret)
+
+        num_completed = 0
+        while num_completed < num_hosts - 1:
+            for j, p in enumerate(p_list):
+                time.sleep(60)            
+                if p.poll() is None:
+                    print("Still sleeping vm{}".format(j+1))
+                else:
+                    print("Finished vm{}".format(j+1))
+                    num_completed += 1
+
     elif (command=="clean"):
         for i in range(1, num_hosts):
             run_cmd = "ssh vm{} rm -rf {}*.pcap*".format(i, output_file)
@@ -68,7 +92,7 @@ def main():
             run_ret = subprocess.call(run_cmd, shell=True)
     elif (command=="collect"):
         for i in range(1, num_hosts):
-            run_cmd = "scp vm{}{}{}*merged_vm{}.pcap.gz {}".format(i, ":", output_file, i, target_dir)
+            run_cmd = "scp vm{}{}{} {}".format(i, ":", analysis_files, target_dir)
             print(run_cmd)
             run_ret = subprocess.call(run_cmd, shell=True)
     else:
@@ -81,7 +105,7 @@ def usage(prog_name):
     print(" Commands:")
     print(" start    - start tcpdump on all nodes")
     print(" stop     - stop tcpdump on all nodes")
-    print(" merge    - merge the reports on each node")
+    print(" analyze  - analyze the reports on each node")
     print(" collect  - get the reports from all nodes")
     print(" clean    - delete the reports from all nodes")
     print("")
