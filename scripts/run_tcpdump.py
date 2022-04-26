@@ -75,16 +75,17 @@ def main():
             p_ret = subprocess.Popen(run_cmd, shell=True)
             p_list.append(p_ret)
 
-        num_completed = 0
-        while num_completed < num_hosts - 1:
+        while True:
+            all_done = True
+            time.sleep(180)
             for j, p in enumerate(p_list):
-                time.sleep(60)            
                 if p.poll() is None:
                     print("Still sleeping vm{}".format(j+1))
+                    all_done = False
                 else:
                     print("Finished vm{}".format(j+1))
-                    num_completed += 1
-
+            if all_done == True:
+                break
     elif (command=="clean"):
         for i in range(1, num_hosts):
             run_cmd = "ssh vm{} rm -rf {}*.pcap*".format(i, output_file)
