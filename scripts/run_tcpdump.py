@@ -67,6 +67,9 @@ def main():
         p_list = []
         for i in range(1, num_hosts):
             MYHOME=os.getenv('HOME')
+            run_cmd = ''' pkill mergecap; pkill tshark '''
+            print(run_cmd)
+            run_ret = subprocess.call(run_cmd, shell=True)
             run_cmd = ''' scp {}/AVAH/scripts/process_network_traces.sh vm{}{}{}/ '''.format(MYHOME, i, ":", MYHOME)
             print(run_cmd)
             run_ret = subprocess.call(run_cmd, shell=True)
