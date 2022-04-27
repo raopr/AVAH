@@ -59,7 +59,7 @@ def main():
             run_ret = subprocess.call(run_cmd, shell=True)
     elif (command=="merge"):
         for i in range(1, num_hosts):
-            run_cmd = ''' ssh vm{} bash -c "mergecap -w {}tcpdump-report-merged_vm{}.pcap.gz {}tcpdump-report*_vm{}.pcap.gz" '''\
+            run_cmd = ''' ssh vm{} "mergecap -w {}tcpdump-report-merged_vm{}.pcap.gz {}tcpdump-report*_vm{}.pcap.gz" '''\
                 .format(i, target_dir, i, target_dir, i)
             print(run_cmd)
             run_ret = subprocess.call(run_cmd, shell=True)
