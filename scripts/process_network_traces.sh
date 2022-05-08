@@ -25,9 +25,13 @@ tshark -q -r ${DATA_DIR}tcpdump-report-merged.pcap.gz -z endpoints,ip |& grep -v
 tshark -q -r ${DATA_DIR}tcpdump-report-merged.pcap.gz -z endpoints,tcp |& grep -v -E 'WARNING|$^' >& ${DATA_DIR}${HOST_ID}-endpoints-tcp-stat.txt
 echo "👍 Completed IP/TCP endpoint statistics"
 
-# I/O statistics, every 60 seconds
+# I/O + TCP statistics, every 60 seconds
 tshark -q -r ${DATA_DIR}tcpdump-report-merged.pcap.gz -z io,stat,60,ip,"MAX(tcp.analysis.ack_rtt)tcp.analysis.ack_rtt,MIN(tcp.analysis.ack_rtt)tcp.analysis.ack_rtt,AVG(tcp.analysis.ack_rtt)tcp.analysis.ack_rtt,MAX(tcp.analysis.bytes_in_flight)tcp.analysis.bytes_in_flight,MIN(tcp.analysis.bytes_in_flight)tcp.analysis.bytes_in_flight,AVG(tcp.analysis.bytes_in_flight)tcp.analysis.bytes_in_flight,MAX(tcp.window_size)tcp.window_size,MIN(tcp.window_size)tcp.window_size,AVG(tcp.window_size)tcp.window_size,MAX(tcp.len)tcp.len,MIN(tcp.len)tcp.len,AVG(tcp.len)tcp.len,MAX(ip.len)ip.len,MIN(ip.len)ip.len,AVG(ip.len)ip.len" |& grep -v -E 'WARNING|$^' >& ${DATA_DIR}${HOST_ID}-io-stat-60.txt
 echo "👍 Completed I/O statistics"
+
+# Additional TCP analysis statistics, every 60 seconds
+tshark -q -r ${DATA_DIR}tcpdump-report-merged.pcap.gz -z io,stat,60,"COUNT(tcp.analysis.retransmission)tcp.analysis.retransmission,COUNT(tcp.analysis.duplicate_ack)tcp.analysis.duplicate_ack,COUNT(tcp.analysis.lost_segment)tcp.analysis.lost_segment,COUNT(tcp.analysis.fast_retransmission)tcp.analysis.fast_retransmission,COUNT(tcp.analysis.window_full)tcp.analysis.window_full,COUNT(tcp.analysis.zero_window)tcp.analysis.zero_window" |& grep -v -E 'WARNING|$^' >& ${DATA_DIR}${HOST_ID}-tcp-analysis-stat-60.txt
+echo "👍 Completed TCP analysis statistics"
 
 # Packet lengths
 tshark -q -r ${DATA_DIR}tcpdump-report-merged.pcap.gz -z plen,tree |& grep -v -E 'WARNING|$^' >& ${DATA_DIR}${HOST_ID}-plen-tree.txt
