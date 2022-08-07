@@ -52,7 +52,7 @@ object GenomeTasks {
   // Construct .bam file from FASTQ
   def runFastqToBam[T](x: T):(T, Int) = {
     val beginTime = Calendar.getInstance().getTime()
-    println(s"Starting .bam construction on ($x) at $beginTime")
+    println(s"Starting BAM construction on ($x) at $beginTime")
     val sampleID = x.toString
 
     var retBam = -1
@@ -61,21 +61,27 @@ object GenomeTasks {
       val hdfsCmd = sys.env("HADOOP_HOME") + "/bin/hdfs"
       val gatk = sys.env("GATK_HOME") + "/gatk"
       val dataDir = sys.env("DATA_DIR")
+      // Remove if already present
+      val retBam0 = Seq("rm", "-f", s"$dataDir/$sampleID"+"_1.fastq.gz", s"$dataDir/$sampleID"+"_2.fastq.gz").!
+      println(s"DeletingFASTQ $retBam0 $sampleID")
       // Copy the FASTQ files to local storage
       val retBam1 = Seq(s"$hdfsCmd", "dfs", "-get", s"$hdfsPrefix/${sampleID}"+"_?.fastq.gz", s"$dataDir").!
+      println(s"CopyingFASTQ $retBam1 $sampleID")
       // Convert to .bam
       val retBam2 = Seq(s"$gatk", "FastqToSam", "-F1", s"$dataDir/$sampleID"+"_1.fastq.gz",
-        "-F1", s"$dataDir/$sampleID"+"_2.fastq.gz", "-O", s"$dataDir/${sampleID}-unaligned.bam",
-        "--SAMPLE_NAME", "mysample").!
+        "-F2", s"$dataDir/$sampleID"+"_2.fastq.gz", "-O", s"$dataDir/${sampleID}-unaligned.bam",
+        "--SAMPLE_NAME", "mysample", "--TMP_DIR", s"$dataDir").!
+      println(s"FastqToSamCreation $retBam2 $sampleID")
       // Copy .bam to HDFS
-      val retBam3 = Seq(s"$hdfsCmd", "dfs", "-put", s"$dataDir/$sampleID"+".bam", s"$hdfsPrefix/").!
-      retBam = retBam1 + retBam2 + retBam3
+      val retBam3 = Seq(s"$hdfsCmd", "dfs", "-put", s"$dataDir/${sampleID}-unaligned.bam", s"$hdfsPrefix/").!
+      println(s"CopyingBAM $retBam3 $sampleID")
+      retBam = retBam2 + retBam3
     } catch {
       case e: Exception => print(s"Exception in FastqToBam, check sequence ID $x")
     }
 
     val endTime = Calendar.getInstance().getTime()
-    println(s"Completed .bam construction on ($x) at ${endTime}, return values: $retBam")
+    println(s"Completed BAM construction on ($x) at ${endTime}, return values: $retBam")
 
     (x, retBam)
   }
@@ -83,7 +89,7 @@ object GenomeTasks {
   // BWA with MarkDuplicates
   def runBWAMarkDuplicates[T](x: T, referenceGenome: String):(T, Int) = {
     val beginTime = Calendar.getInstance().getTime()
-    println(s"Starting BWA w/ Mark Duplicates on ($x) at $beginTime")
+    println(s"Starting BWAMarkDuplicates on ($x) at $beginTime")
     val sampleID = x.toString
 
     val hdfsPrefix = "hdfs://vm0:9000"
@@ -94,18 +100,21 @@ object GenomeTasks {
     var retBWA = -1
     try {
       // Delete $sampleId.bam_* files
-      val retDel = Seq(s"$hdfsCmd", "dfs", "-rm", "-r", "-skipTrash", s"/${sampleID}.bam_*").!
+      //val retDel = Seq(s"$hdfsCmd", "dfs", "-rm", "-r", "-skipTrash", s"/${sampleID}.bam_*").!
       val execBWA = Seq(s"$gatk", "BwaAndMarkDuplicatesPipelineSpark", "-I",
         s"$hdfsPrefix/${sampleID}-unaligned.bam", "-O", s"$hdfsPrefix/$sampleID"+"-final.bam", "-R",
-        s"$dataDir/$referenceGenome.fa", "--", "--spark-runner", "SPARK", "--spark-master", "yarn").!
-      retBWA = retDel + execBWA
+        s"$dataDir/$referenceGenome.fa", "--tmp-dir", s"$dataDir", "--", "--spark-runner", "SPARK",
+        "--spark-master", "yarn",
+        "--num-executors", "8",
+        "--conf", "spark.executor.memoryOverhead=5g").!
+      retBWA = execBWA
     }
     catch {
       case e: Exception => print(s"Exception in BWA w/ Mark Duplicates, check sequence ID $x")
     }
 
     val endTime = Calendar.getInstance().getTime()
-    println(s"Completed BWA w/ MarkDuplicates on ($x) ended at $endTime; return values bwa: $retBWA")
+    println(s"Completed BWAMarkDuplicates on ($x) ended at $endTime; return values bwa: $retBWA")
 
     (x, retBWA)
   }
@@ -118,11 +127,13 @@ object GenomeTasks {
 
     val hdfsPrefix = "hdfs://vm0:9000"
     val gatk = sys.env("GATK_HOME") + "/gatk"
+    val dataDir = "file://" + sys.env("DATA_DIR")
 
     var retSortSam = -1
     try {
       retSortSam = Seq(s"$gatk", "SortSamSpark", "-I",
         s"$hdfsPrefix/${sampleID}-final.bam", "-O", s"$hdfsPrefix/${sampleID}-final-sorted.bam",
+        "--tmp-dir", s"$dataDir",
         "--", "--spark-runner", "SPARK", "--spark-master", "yarn").!
     }
     catch {
@@ -130,7 +141,7 @@ object GenomeTasks {
     }
 
     val endTime = Calendar.getInstance().getTime()
-    println(s"Completed SortSam on ($x) ended at $endTime; return values bwa: $retSortSam")
+    println(s"Completed SortSam on ($x) ended at $endTime; return values SortSam: $retSortSam")
 
     (x, retSortSam)
   }
@@ -147,7 +158,7 @@ object GenomeTasks {
 
     var retHaplotypeCaller = -1
     try {
-      retHaplotypeCaller = Seq(s"$gatk", "-R", s"$dataDir/$referenceGenome.fa", "-I",
+      retHaplotypeCaller = Seq(s"$gatk", "HaplotypeCallerSpark", "-R", s"$dataDir/$referenceGenome.fa", "-I",
         s"$hdfsPrefix/${sampleID}-final-sorted.bam", "-O", s"$hdfsPrefix/${sampleID}.vcf",
         "--", "--spark-runner", "SPARK", "--spark-master", "yarn").!
     } catch {
@@ -156,7 +167,7 @@ object GenomeTasks {
 
     // Delete all intermediate files as they consume a lot of space
     val hdfsCmd = sys.env("HADOOP_HOME") + "/bin/hdfs"
-    val retDelbam = Seq(s"$hdfsCmd", "dfs", "-rm", "-r", "-skipTrash", s"/${sampleID}.bam*").!
+    val retDelbam = Seq(s"$hdfsCmd", "dfs", "-rm", "-r", "-skipTrash", s"/${sampleID}-*.bam*").!
 
     // Create a empty .retry file
     val retryExt = ".retry"
