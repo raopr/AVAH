@@ -160,6 +160,7 @@ object GenomeTasks {
     try {
       retHaplotypeCaller = Seq(s"$gatk", "HaplotypeCallerSpark", "-R", s"$dataDir/$referenceGenome.fa", "-I",
         s"$hdfsPrefix/${sampleID}-final-sorted.bam", "-O", s"$hdfsPrefix/${sampleID}.vcf",
+        "--tmp-dir", s"$dataDir",
         "--", "--spark-runner", "SPARK", "--spark-master", "yarn").!
     } catch {
       case e: Exception => print(s"Exception in HaplotypeCaller, check sequence ID $x")
