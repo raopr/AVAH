@@ -145,6 +145,13 @@ fi
 echo ${SPARK_CONF}
 echo ${EXTRA_ARGS}
 
+scala_version=$(spark-submit --version |& grep 'Using Scala version')
+if [[ ${scala_version} == *"Using Scala version 2.11"* ]]; then
+    EVA_JAR=${HOME}"/AVAH/lib/avah_2-4-7_2.11-0.1.jar"
+fi
+
+echo "Using "${EVA_JAR}
+
 if [[ ${EXTRA_ARGS} == "" ]]; then
     ${SPARK_HOME}/bin/spark-submit --master ${MASTER_URL} --num-executors ${NUM_EXECUTORS} \
             ${SPARK_CONF} \
