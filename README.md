@@ -1,7 +1,13 @@
-# AVAH
+# AVAH - Accelerating Variant Calling on Human Genomes
 
-## Environment
-Spark 3.0.0, Hadoop 3.2.0, Scala 2.12.8
+This is a subproject of [EVA](https://github.com/MU-Data-Science/EVA).
+
+## Acknowledgments
+This work is supported by the National Science Foundation under [Grant No. 2034247](https://nsf.gov/awardsearch/showAward?AWD_ID=2034247).
+
+## Environments
+- Spark 3.0.0, Hadoop 3.2.0, Scala 2.12.8 (for [Adam-Cannoli](https://github.com/bigdatagenomics))
+- Spark 2.4.7, Hadoop 2.7.6, Scala 2.11.12 (for [GATK4](https://gatk.broadinstitute.org/hc/en-us))
 
 Hadoop 3+ must use `etc/hadoop/workers` to list the data nodes; check using `hdfs dfsadmin -report`
 
