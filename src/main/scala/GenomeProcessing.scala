@@ -44,6 +44,7 @@ object GenomeProcessing {
       -s                          naive, one sequence at-a-time
       -e                          early retry of failed sequences
       -G                          Use GATK pipeline (default: ADAM-Cannoli)
+      -g                          Use GPUs when available (default: use CPUs only)
     """)
   }
 
@@ -75,6 +76,7 @@ object GenomeProcessing {
         case ("-B") :: tail => nextOption(map ++ Map('bqsr_indel -> true), tail)
         case ("-e") :: tail => nextOption(map ++ Map('early_retry -> true), tail)
         case ("-G") :: tail => nextOption(map ++ Map('use_GATK -> true), tail)
+        case ("-g") :: tail => nextOption(map ++ Map('use_GPUs -> "true"), tail)
         case value :: tail => println("Unknown option: " + value)
           usage()
           sys.exit(1)
@@ -102,6 +104,7 @@ object GenomeProcessing {
     val partitioner = options.getOrElse('partitioner, "D")
     val earlyRetryMode = options.getOrElse('early_retry, false)
     val useGATK = options.getOrElse('use_GATK, false)
+    val useGPUs = options.getOrElse('use_GPUs, "false").toString
 
     println("Reference genome: ", referenceGenome)
     println("Num. nodes: ", numNodes)
@@ -112,6 +115,7 @@ object GenomeProcessing {
     println("BQSR INDEL mode: ", bqsrIndelMode)
     println("Early retry mode: ", earlyRetryMode)
     println("Use GATK pipeline: ", useGATK)
+    println("Use GPUs: ", useGPUs)
 
     if (commandToExecute == null) {
       println("Option -c | --command is required.")
@@ -271,13 +275,13 @@ object GenomeProcessing {
                       case true => retrySequenceList
                           .map(x => executeAsync(cleanupFiles(x)))
                           .mapPartitions(it => await(it, batchSize = minBatchSize))
-                          .map(x => executeAsync(runFastqToBam(x._1)))
+                          .map(x => executeAsync(runFastqToBam(x._1, referenceGenome, useGPUs)))
                           .mapPartitions(it => await(it, batchSize = minBatchSize))
-                          .map(x => executeAsync(runBWAMarkDuplicates(x._1, referenceGenome)))
+                          .map(x => executeAsync(runBWAMarkDuplicates(x._1, referenceGenome, useGPUs)))
                           .mapPartitions(it => await(it, batchSize = minBatchSize))
-                          .map(x => executeAsync(runSortSam(x._1)))
+                          .map(x => executeAsync(runSortSam(x._1, useGPUs)))
                           .mapPartitions(it => await(it, batchSize = minBatchSize))
-                          .map(x => executeAsync(runHaplotypeCaller(x._1, referenceGenome)))
+                          .map(x => executeAsync(runHaplotypeCaller(x._1, referenceGenome, useGPUs)))
                           .mapPartitions(it => await(it, batchSize = minBatchSize))
                           .collect()
                     }
@@ -316,13 +320,13 @@ object GenomeProcessing {
                   .mapPartitions(it => await(it, batchSize = min (maxTasks, minBatchSize)))
                   .collect()
               case true => sortedSampleIDList
-                  .map(s => executeAsync(runFastqToBam(s._2)))
+                  .map(s => executeAsync(runFastqToBam(s._2, referenceGenome, useGPUs)))
                   .mapPartitions(it => await(it, batchSize = min(maxTasks, minBatchSize)))
-                  .map(x => executeAsync(runBWAMarkDuplicates(x._1, referenceGenome)))
+                  .map(x => executeAsync(runBWAMarkDuplicates(x._1, referenceGenome, useGPUs)))
                   .mapPartitions(it => await(it, batchSize = min(maxTasks, minBatchSize)))
-                  .map(x => executeAsync(runSortSam(x._1)))
+                  .map(x => executeAsync(runSortSam(x._1, useGPUs)))
                   .mapPartitions(it => await(it, batchSize = min(maxTasks, minBatchSize)))
-                  .map(x => executeAsync(runHaplotypeCaller(x._1, referenceGenome)))
+                  .map(x => executeAsync(runHaplotypeCaller(x._1, referenceGenome, useGPUs)))
                   .mapPartitions(it => await(it, batchSize = min(maxTasks, minBatchSize)))
                   .collect()
             }
