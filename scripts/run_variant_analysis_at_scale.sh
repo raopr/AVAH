@@ -23,7 +23,7 @@ usage()
 {
   echo "Usage: run_variant_analysis_at_scale [ -h ] [ -i <file1> ] [ -d <file2> ] [ -n <num_nodes> ] "
   echo "                                     [ -b <batch_size> ] [ -p <num_partitions> ] [ -r <reference> ] "
-  echo "                                     [ -s ] [ -f ] [ -P <type> ] [ -B ] [ -e ] [ -G ]"
+  echo "                                     [ -s ] [ -f ] [ -P <type> ] [ -B ] [ -e ] [ -G ] [ -g ]"
   echo ""
   echo "Required arguments:"
   echo "<file1>         - file containing sample IDs (e.g., SRR077487), one per line"
@@ -41,6 +41,7 @@ usage()
   echo " -B              - enable BQSR and INDEL realignment"
   echo " -e              - enable early retry of failed sequences"
   echo " -G              - use GATK pipeline (default: ADAM-Cannoli)"
+  echo " -g              - Use GPUs when available (default: use CPUs only)"
   exit 1
 }
 
@@ -56,8 +57,9 @@ FORK_JOIN=0
 BQSR_INDEL=0
 EARLY_RETRY=0
 USE_GATK=0
+USE_GPU=0
 
-while getopts 'sfhBeGi:d:n:b:p:r:P:' value
+while getopts 'sfhBeGgi:d:n:b:p:r:P:' value
 do
   case $value in
     b) BATCH_SIZE=$OPTARG ;;
@@ -72,6 +74,7 @@ do
     B) BQSR_INDEL=1 ;;
     e) EARLY_RETRY=1 ;;
     G) USE_GATK=1 ;;
+    g) USE_GPU=1 ;;
     h|?) usage ;;
   esac
 done
@@ -140,6 +143,10 @@ fi
 
 if [[ ${USE_GATK} -eq 1 ]]; then
     EXTRA_ARGS=${EXTRA_ARGS}" -G"
+fi
+
+if [[ ${USE_GPU} -eq 1 ]]; then
+    EXTRA_ARGS=${EXTRA_ARGS}" -g"
 fi
 
 echo ${SPARK_CONF}
