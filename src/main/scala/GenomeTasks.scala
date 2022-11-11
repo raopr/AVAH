@@ -60,8 +60,7 @@ object GenomeTasks {
       val hdfsCmd = sys.env("HADOOP_HOME") + "/bin/hdfs"
       val gatk = sys.env("GATK_HOME") + "/gatk"
       val dataDir = sys.env("DATA_DIR")
-      val parabricks = s"sudo docker run --gpus all --rm --volume $dataDir:/workdir --volume $dataDir:/outputdir " +
-        "nvcr.io/nvidia/clara/clara-parabricks:4.0.0-1 pbrun"
+
       // Remove if already present
       val retBam0 = Seq("rm", "-f", s"$dataDir/$sampleID"+"_1.fastq.gz", s"$dataDir/$sampleID"+"_2.fastq.gz").!
       println(s"DeletingFASTQ $retBam0 $sampleID")
@@ -71,15 +70,7 @@ object GenomeTasks {
 
       // Convert to .bam
       if (useGPUs == "true") {
-        val retBam2 = Seq(s"$parabricks", "fq2bam", "--ref", s"/workdir/$referenceGenome.fa" +
-          "--in-fq", s"/workdir/${sampleID}" + "_1.fastq.gz", s"/workdir/${sampleID}" + "_2.fastq.gz",
-          "--out-bam", s"/outputdir/$sampleID" + "-final-sorted.bam").!
-        println(s"Parabricks f2qsam $retBam2 $sampleID")
-
-        // Copy .bam to HDFS
-        val retBam3 = Seq(s"$hdfsCmd", "dfs", "-put", s"$dataDir/${sampleID}-final-sorted.bam", s"$hdfsPrefix/").!
-        println(s"CopyingBAM $retBam3 $sampleID")
-        retBam = retBam2 + retBam3
+        println("Do nothing!")
       }
       else {
         val retBam2 = Seq(s"$gatk", "FastqToSam", "-F1", s"$dataDir/$sampleID" + "_1.fastq.gz",
@@ -182,16 +173,10 @@ object GenomeTasks {
     val dataDir = "file://" + sys.env("DATA_DIR")
     val gatk = sys.env("GATK_HOME") + "/gatk"
 
-    val parabricks = s"sudo docker run --gpus all --rm --volume $dataDir:/workdir --volume $dataDir:/outputdir " +
-      "nvcr.io/nvidia/clara/clara-parabricks:4.0.0-1 pbrun"
-
     var retHaplotypeCaller = -1
     try {
       if (useGPUs == "true") {
-        retHaplotypeCaller = Seq(s"$parabricks", "haplotypecaller", "--ref", s"/workdir/$referenceGenome.fa" +
-          "--in-bam", s"/workdir/${sampleID}_output.bam",
-          "--out-variants", s"/outputdir/${sampleID}.vcf").!
-        val retCopyvcf = Seq(s"$hdfsCmd", "dfs", "-put", s"${dataDir}/${sampleID}.vcf", s"/${sampleID}.vcf").!
+        println("Do nothing!")
       }
       else {
         retHaplotypeCaller = Seq(s"$gatk", "HaplotypeCallerSpark", "-R", s"$dataDir/$referenceGenome.fa", "-I",
