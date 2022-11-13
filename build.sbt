@@ -1,6 +1,6 @@
-val sparkVersion = "2.4.7"
-//scalaVersion := "2.12.8" // For ADAM-Cannoli/Spark3
-scalaVersion := "2.11.12" // For GATK/Spark2
+val sparkVersion = "3.0.0"
+scalaVersion := "2.12.8" // For ADAM-Cannoli/Spark3
+//scalaVersion := "2.11.12" // For GATK/Spark2
 
 version := "0.1"
 name := "avah_" + sparkVersion
