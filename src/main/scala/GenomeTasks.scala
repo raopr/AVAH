@@ -55,12 +55,12 @@ object GenomeTasks {
     println(s"Starting BAM construction on ($x) at $beginTime")
     val sampleID = x.toString
     var retBam = -1
-    try {
-      val hdfsPrefix = "hdfs://vm0:9000"
-      val hdfsCmd = sys.env("HADOOP_HOME") + "/bin/hdfs"
-      val gatk = sys.env("GATK_HOME") + "/gatk"
-      val dataDir = sys.env("DATA_DIR")
+    val hdfsPrefix = "hdfs://vm0:9000"
+    val hdfsCmd = sys.env("HADOOP_HOME") + "/bin/hdfs"
+    val gatk = sys.env("GATK_HOME") + "/gatk"
+    val dataDir = sys.env("DATA_DIR")
 
+    try {
       // Remove if already present
       val retBam0 = Seq("rm", "-f", s"$dataDir/$sampleID"+"_1.fastq.gz", s"$dataDir/$sampleID"+"_2.fastq.gz").!
       println(s"DeletingFASTQ $retBam0 $sampleID")
@@ -75,7 +75,7 @@ object GenomeTasks {
       else {
         val retBam2 = Seq(s"$gatk", "FastqToSam", "-F1", s"$dataDir/$sampleID" + "_1.fastq.gz",
           "-F2", s"$dataDir/$sampleID" + "_2.fastq.gz", "-O", s"$dataDir/${sampleID}-unaligned.bam",
-          "--SAMPLE_NAME", "mysample", "--TMP_DIR", s"$dataDir").!
+          "--SAMPLE_NAME", "mysample", "--TMP_DIR", s"$dataDir/tmp").!
         println(s"FastqToSamCreation $retBam2 $sampleID")
         // Copy .bam to HDFS
         val retBam3 = Seq(s"$hdfsCmd", "dfs", "-put", s"$dataDir/${sampleID}-unaligned.bam", s"$hdfsPrefix/").!
@@ -86,6 +86,9 @@ object GenomeTasks {
     } catch {
       case e: Exception => print(s"Exception in FastqToBam, check sequence ID $x")
     }
+
+    // Delete from $dataDir
+    val retDel = Seq("rm", "-f", s"$dataDir/${sampleID}_1.fastq.gz", s"$dataDir/${sampleID}_2.fastq.gz").!
 
     val endTime = Calendar.getInstance().getTime()
     println(s"Completed BAM construction on ($x) at ${endTime}, return values: $retBam")
@@ -115,7 +118,7 @@ object GenomeTasks {
       //val retDel = Seq(s"$hdfsCmd", "dfs", "-rm", "-r", "-skipTrash", s"/${sampleID}.bam_*").!
       val execBWA = Seq(s"$gatk", "BwaAndMarkDuplicatesPipelineSpark", "-I",
         s"$hdfsPrefix/${sampleID}-unaligned.bam", "-O", s"$hdfsPrefix/$sampleID"+"-final.bam", "-R",
-        s"$dataDir/$referenceGenome.fa", "--tmp-dir", s"$dataDir", "--", "--spark-runner", "SPARK",
+        s"$dataDir/$referenceGenome.fa", "--tmp-dir", s"$dataDir/tmp", "--", "--spark-runner", "SPARK",
         "--spark-master", "yarn",
         "--num-executors", "8",
         "--conf", "spark.executor.memoryOverhead=5g").!
@@ -150,7 +153,7 @@ object GenomeTasks {
     try {
       retSortSam = Seq(s"$gatk", "SortSamSpark", "-I",
         s"$hdfsPrefix/${sampleID}-final.bam", "-O", s"$hdfsPrefix/${sampleID}-final-sorted.bam",
-        "--tmp-dir", s"$dataDir",
+        "--tmp-dir", s"$dataDir/tmp",
         "--", "--spark-runner", "SPARK", "--spark-master", "yarn").!
     }
     catch {
@@ -181,7 +184,7 @@ object GenomeTasks {
       else {
         retHaplotypeCaller = Seq(s"$gatk", "HaplotypeCallerSpark", "-R", s"$dataDir/$referenceGenome.fa", "-I",
           s"$hdfsPrefix/${sampleID}-final-sorted.bam", "-O", s"$hdfsPrefix/${sampleID}.vcf",
-          "--tmp-dir", s"$dataDir",
+          "--tmp-dir", s"$dataDir/tmp",
           "--", "--spark-runner", "SPARK", "--spark-master", "yarn").!
       }
     } catch {
