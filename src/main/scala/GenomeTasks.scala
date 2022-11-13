@@ -77,9 +77,14 @@ object GenomeTasks {
           "-F2", s"$dataDir/$sampleID" + "_2.fastq.gz", "-O", s"$dataDir/${sampleID}-unaligned.bam",
           "--SAMPLE_NAME", "mysample", "--TMP_DIR", s"$dataDir/tmp").!
         println(s"FastqToSamCreation $retBam2 $sampleID")
+
         // Copy .bam to HDFS
         val retBam3 = Seq(s"$hdfsCmd", "dfs", "-put", s"$dataDir/${sampleID}-unaligned.bam", s"$hdfsPrefix/").!
         println(s"CopyingBAM $retBam3 $sampleID")
+
+        // Delete from $dataDir
+        val retDel = Seq("rm", "-f", s"$dataDir/${sampleID}-unaligned.bam").!
+
         retBam = retBam2 + retBam3
       }
 
