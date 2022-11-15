@@ -72,21 +72,21 @@ object GenomeTasks {
       if (useGPUs == "true") {
         println("Do nothing!")
       }
-      else {
-        val retBam2 = Seq(s"$gatk", "FastqToSam", "-F1", s"$dataDir/$sampleID" + "_1.fastq.gz",
-          "-F2", s"$dataDir/$sampleID" + "_2.fastq.gz", "-O", s"$dataDir/${sampleID}-unaligned.bam",
-          "--SAMPLE_NAME", "mysample", "--TMP_DIR", s"$dataDir/tmp").!
-        println(s"FastqToSamCreation $retBam2 $sampleID")
 
-        // Copy .bam to HDFS
-        val retBam3 = Seq(s"$hdfsCmd", "dfs", "-put", s"$dataDir/${sampleID}-unaligned.bam", s"$hdfsPrefix/").!
-        println(s"CopyingBAM $retBam3 $sampleID")
+      val retMkdir = Seq("mkdir", s"$dataDir/tmp_$sampleID").!
+      val retBam2 = Seq(s"$gatk", "FastqToSam", "-F1", s"$dataDir/$sampleID" + "_1.fastq.gz",
+        "-F2", s"$dataDir/$sampleID" + "_2.fastq.gz", "-O", s"$dataDir/${sampleID}-unaligned.bam",
+        "--SAMPLE_NAME", "mysample", "--TMP_DIR", s"$dataDir/tmp_$sampleID").!
+      println(s"FastqToSamCreation $retBam2 $sampleID")
 
-        // Delete from $dataDir
-        val retDel = Seq("rm", "-f", s"$dataDir/${sampleID}-unaligned.bam").!
+      // Copy .bam to HDFS
+      val retBam3 = Seq(s"$hdfsCmd", "dfs", "-put", s"$dataDir/${sampleID}-unaligned.bam", s"$hdfsPrefix/").!
+      println(s"CopyingBAM $retBam3 $sampleID")
 
-        retBam = retBam2 + retBam3
-      }
+      // Delete from $dataDir
+      val retDel = Seq("rm", "-f", s"$dataDir/${sampleID}-unaligned.bam", s"$dataDir/tmp_$sampleID").!
+
+      retBam = retBam2 + retBam3
 
     } catch {
       case e: Exception => print(s"Exception in FastqToBam, check sequence ID $x")
@@ -111,23 +111,27 @@ object GenomeTasks {
     val hdfsCmd = sys.env("HADOOP_HOME") + "/bin/hdfs"
     val gatk = sys.env("GATK_HOME") + "/gatk"
     val dataDir = "file://" + sys.env("DATA_DIR")
+    val dataDirLocal = "/mydata" // Needed for local file operations via shell
 
     if (useGPUs == "true") {
-      println(s"Skipped BWAMarkDuplicates on ($x)")
-      return (x, 0)
+      println("Do nothing!")
     }
 
     var retBWA = -1
     try {
       // Delete $sampleId.bam_* files
       //val retDel = Seq(s"$hdfsCmd", "dfs", "-rm", "-r", "-skipTrash", s"/${sampleID}.bam_*").!
+      val retMkdir = Seq("mkdir", s"$dataDirLocal/tmp_$sampleID").!
       val execBWA = Seq(s"$gatk", "BwaAndMarkDuplicatesPipelineSpark", "-I",
         s"$hdfsPrefix/${sampleID}-unaligned.bam", "-O", s"$hdfsPrefix/$sampleID"+"-final.bam", "-R",
-        s"$dataDir/$referenceGenome.fa", "--tmp-dir", s"$dataDir/tmp", "--", "--spark-runner", "SPARK",
+        s"$dataDir/$referenceGenome.fa", "--tmp-dir", s"$dataDir/tmp_$sampleID", "--", "--spark-runner", "SPARK",
         "--spark-master", "yarn",
         "--num-executors", "8",
         "--conf", "spark.executor.memoryOverhead=5g").!
       retBWA = execBWA
+
+      // Delete tmp directory
+      val retDel = Seq("rm", "-rf", s"$dataDirLocal/tmp_$sampleID").!
     }
     catch {
       case e: Exception => print(s"Exception in BWA w/ Mark Duplicates, check sequence ID $x")
@@ -148,18 +152,22 @@ object GenomeTasks {
     val hdfsPrefix = "hdfs://vm0:9000"
     val gatk = sys.env("GATK_HOME") + "/gatk"
     val dataDir = "file://" + sys.env("DATA_DIR")
+    val dataDirLocal = "/mydata" // Needed for local file operations via shell
 
     if (useGPUs == "true") {
-      println(s"Skipped SortSam on ($x)")
-      return (x, 0)
+      println("Do nothing!")
     }
 
     var retSortSam = -1
     try {
+      val retMkdir = Seq("mkdir", s"$dataDirLocal/tmp_$sampleID").!
       retSortSam = Seq(s"$gatk", "SortSamSpark", "-I",
         s"$hdfsPrefix/${sampleID}-final.bam", "-O", s"$hdfsPrefix/${sampleID}-final-sorted.bam",
-        "--tmp-dir", s"$dataDir/tmp",
+        "--tmp-dir", s"$dataDir/tmp_$sampleID",
         "--", "--spark-runner", "SPARK", "--spark-master", "yarn").!
+
+      // Delete tmp directory
+      val retDel = Seq("rm", "-rf", s"$dataDirLocal/tmp_$sampleID").!
     }
     catch {
       case e: Exception => print(s"Exception in SortSam, check sequence ID $x")
@@ -179,19 +187,23 @@ object GenomeTasks {
     val hdfsCmd = sys.env("HADOOP_HOME") + "/bin/hdfs"
     val hdfsPrefix = "hdfs://vm0:9000"
     val dataDir = "file://" + sys.env("DATA_DIR")
+    val dataDirLocal = "/mydata" // Needed for local file operations via shell
     val gatk = sys.env("GATK_HOME") + "/gatk"
 
     var retHaplotypeCaller = -1
+    if (useGPUs == "true") {
+      println("Do nothing!")
+    }
+
     try {
-      if (useGPUs == "true") {
-        println("Do nothing!")
-      }
-      else {
-        retHaplotypeCaller = Seq(s"$gatk", "HaplotypeCallerSpark", "-R", s"$dataDir/$referenceGenome.fa", "-I",
-          s"$hdfsPrefix/${sampleID}-final-sorted.bam", "-O", s"$hdfsPrefix/${sampleID}.vcf",
-          "--tmp-dir", s"$dataDir/tmp",
-          "--", "--spark-runner", "SPARK", "--spark-master", "yarn").!
-      }
+      val retMkdir = Seq("mkdir", s"$dataDirLocal/tmp_$sampleID").!
+      retHaplotypeCaller = Seq(s"$gatk", "HaplotypeCallerSpark", "-R", s"$dataDir/$referenceGenome.fa", "-I",
+        s"$hdfsPrefix/${sampleID}-final-sorted.bam", "-O", s"$hdfsPrefix/${sampleID}.vcf",
+        "--tmp-dir", s"$dataDir/tmp_$sampleID",
+        "--", "--spark-runner", "SPARK", "--spark-master", "yarn").!
+
+      // Delete tmp directory
+      val retDel = Seq("rm", "-rf", s"$dataDirLocal/tmp_$sampleID").!
     } catch {
       case e: Exception => print(s"Exception in HaplotypeCaller, check sequence ID $x")
     }
