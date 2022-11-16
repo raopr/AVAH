@@ -111,7 +111,7 @@ object GenomeTasks {
     val hdfsCmd = sys.env("HADOOP_HOME") + "/bin/hdfs"
     val gatk = sys.env("GATK_HOME") + "/gatk"
     val dataDir = "file://" + sys.env("DATA_DIR")
-    val dataDirLocal = "/mydata" // Needed for local file operations via shell
+    val dataDirLocal = sys.env("DATA_DIR") // Needed for local file operations via shell
 
     if (useGPUs == "true") {
       println("Do nothing!")
@@ -152,7 +152,7 @@ object GenomeTasks {
     val hdfsPrefix = "hdfs://vm0:9000"
     val gatk = sys.env("GATK_HOME") + "/gatk"
     val dataDir = "file://" + sys.env("DATA_DIR")
-    val dataDirLocal = "/mydata" // Needed for local file operations via shell
+    val dataDirLocal = sys.env("DATA_DIR") // Needed for local file operations via shell
 
     if (useGPUs == "true") {
       println("Do nothing!")
@@ -187,7 +187,7 @@ object GenomeTasks {
     val hdfsCmd = sys.env("HADOOP_HOME") + "/bin/hdfs"
     val hdfsPrefix = "hdfs://vm0:9000"
     val dataDir = "file://" + sys.env("DATA_DIR")
-    val dataDirLocal = "/mydata" // Needed for local file operations via shell
+    val dataDirLocal = sys.env("DATA_DIR") // Needed for local file operations via shell
     val gatk = sys.env("GATK_HOME") + "/gatk"
 
     var retHaplotypeCaller = -1
