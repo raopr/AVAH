@@ -18,6 +18,8 @@ BWAMEM2_HOME="/mydata/bwa-mem2"
 FREEBAYES_HOME="/mydata/freebayes"
 DATA_DIR="/mydata"
 GATK_HOME="/mydata/gatk-4.1.8.0"
+KNOWN_SNPS="/mydata/Homo_sapiens_assembly38.dbsnp138.vcf.gz"
+KNOWN_INDELS="/mydata/Homo_sapiens_assembly38.known_indels.vcf.gz"
 
 usage()
 {
@@ -120,6 +122,8 @@ SPARK_CONF="--conf spark.yarn.appMasterEnv.CANNOLI_HOME=${CANNOLI_HOME_DIR}
         --conf spark.executorEnv.FREEBAYES_HOME=${FREEBAYES_HOME}
         --conf spark.executorEnv.DATA_DIR=${DATA_DIR}
         --conf spark.executorEnv.GATK_HOME=${GATK_HOME}
+        --conf spark.executorEnv.KNOWN_SNPS=${KNOWN_SNPS}
+        --conf spark.executorEnv.KNOWN_INDELS=${KNOWN_INDELS}
         --conf spark.network.timeout=${TIMEOUT}
         --conf spark.yarn.maxAppAttempts=${MAX_ATTEMPTS} "
 
