@@ -76,7 +76,11 @@ object GenomeTasks {
       val retMkdir = Seq("mkdir", s"$dataDir/tmp_$sampleID").!
       val retBam2 = Seq(s"$gatk", "FastqToSam", "-F1", s"$dataDir/$sampleID" + "_1.fastq.gz",
         "-F2", s"$dataDir/$sampleID" + "_2.fastq.gz", "-O", s"$dataDir/${sampleID}-unaligned.bam",
-        "--SAMPLE_NAME", "mysample", "--TMP_DIR", s"$dataDir/tmp_$sampleID").!
+        "--SAMPLE_NAME", "mysample",
+        "--READ_GROUP_NAME", "mygroup",
+        "--PLATFORM", "illumina",
+        "--LIBRARY_NAME", "mylib",
+        "--TMP_DIR", s"$dataDir/tmp_$sampleID").!
       println(s"FastqToSamCreation $retBam2 $sampleID")
 
       // Copy .bam to HDFS
