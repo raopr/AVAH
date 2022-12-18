@@ -90,6 +90,13 @@ let NUM_EXECUTORS=${NUM_NODES}-1
 # Delete *.ifq, *.bam*, *.vcf* files, *.retry files
 $HADOOP_HOME/bin/hdfs dfs -rm -r -skipTrash /*.ifq /*.bam* /*.vcf* /*.retry
 
+# Delete any temporary files from previous execution
+for ((i=0; i<${NUM_NODES}; i++))
+do
+  RM_CMD="'rm -r ${DATA_DIR}/*bam* ${DATA_DIR}/*fastq.gz* ${DATA_DIR}/tmp_*'"
+  ssh vm${i} bash -c ${RM_CMD}
+done
+
 # network timeout for shuffle
 TIMEOUT="420s"
 
